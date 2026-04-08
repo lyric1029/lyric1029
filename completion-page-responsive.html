@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>知识点完成页 - 响应式</title>
+    <style>
+        /* 全局样式 */
+        :root {
+            --primary-orange: #FF6B00;
+            --text-primary: #2E2E3A;
+            --text-secondary: #595959;
+            --text-placeholder: #8C8C8C;
+            --bg-page: #F5F5F5;
+            --bg-card: #FFFFFF;
+            --border-color: #E8E8E8;
+            --overlay: rgba(0, 0, 0, 0.5);
+            --success: #52C41A;
+            --primary-gradient: linear-gradient(135deg, #FF6B00, #FF9E43);
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-xxl: 40px;
+            --font-size-xs: 12px;
+            --font-size-sm: 14px;
+            --font-size-md: 16px;
+            --font-size-lg: 18px;
+            --font-size-xl: 20px;
+            --font-size-xxl: 24px;
+            --font-weight-medium: 500;
+            --font-weight-bold: 600;
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --radius-full: 9999px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .flex-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .touchable {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .touchable:active {
+            transform: scale(0.98);
+        }
+
+        .text-ellipsis-1 {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .text-ellipsis-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* 页面容器 */
+        .completion-page {
+            min-height: 100vh;
+            min-height: 100dvh;
+            background: var(--bg-page);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 简化的页面头部 */
+        .page-header-simple {
+            padding: var(--spacing-md);
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .back-text {
+            margin-left: var(--spacing-sm);
+            font-size: var(--font-size-md);
+            color: var(--text-primary);
+        }
+
+        /* 页面内容 */
+        .page-body {
+            flex: 1;
+            padding: 0 var(--spacing-md) var(--spacing-md);
+        }
+
+        /* 通用样式 */
+        .result-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-lg) var(--spacing-md);
+            text-align: left;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .result-header {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .result-header .result-title {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .result-header .result-knowledge {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            display: block;
+            margin: 0;
+            margin-top: var(--spacing-xs);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .user-avatar {
+            margin-right: var(--spacing-md);
+        }
+
+        .user-stats-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .user-level {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            text-align: left;
+        }
+
+        .user-exp {
+            display: flex;
+            align-items: center;
+        }
+
+        .exp-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-placeholder);
+            margin-right: var(--spacing-xs);
+        }
+
+        .exp-value {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+
+        .exp-bar {
+            width: 100%;
+            height: 4px;
+            background: #F0F0F0;
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+
+        .exp-progress {
+            height: 100%;
+            background: var(--primary-gradient);
+            border-radius: var(--radius-full);
+        }
+
+        .section-subtitle {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .rewards-section {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .reward-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .reward-icon {
+            margin-right: var(--spacing-sm);
+        }
+
+        .reward-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .reward-info {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reward-name {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+        }
+
+        .help-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: var(--spacing-xs);
+            padding: 0;
+        }
+
+        .help-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--text-placeholder);
+            color: white;
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .reward-value {
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-medium);
+            color: var(--primary-orange);
+            text-align: right;
+        }
+
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-text {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+
+        .task-status {
+            font-size: var(--font-size-xs);
+            color: var(--text-placeholder);
+            text-align: right;
+        }
+
+        .next-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .next-card-header {
+            margin-bottom: var(--spacing-sm);
+            width: 100%;
+        }
+
+        .next-card-title {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+        }
+
+        .next-card-cover {
+            width: 100%;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .video-preview {
+            position: relative;
+            margin-bottom: var(--spacing-sm);
+            width: 100%;
+            aspect-ratio: 16/9;
+        }
+
+        .video-preview svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .video-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 2px var(--spacing-xs);
+            font-size: var(--font-size-xs);
+            border-radius: 0 0 var(--radius-md) var(--radius-md);
+            width: 100%;
+        }
+
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .play-button svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .next-card-footer {
+            width: 100%;
+            margin-top: auto;
+        }
+
+        .lesson-meta {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        .lesson-meta span {
+            flex: 0 0 auto;
+        }
+
+        .lesson-type,
+        .lesson-difficulty,
+        .lesson-tag,
+        .lesson-free {
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: var(--radius-sm);
+        }
+
+        .lesson-type {
+            background: #E6F7FF;
+            color: #1890FF;
+        }
+
+        .lesson-difficulty {
+            background: #FFF7E6;
+            color: #FA8C16;
+        }
+
+        .lesson-tag {
+            background: #F6FFED;
+            color: #52C41A;
+        }
+
+        .lesson-free {
+            background: #FFF1F0;
+            color: #F5222D;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .section-title {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+        }
+
+        .activity-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .activity-img {
+            width: 100%;
+            min-height: 120px;
+            height: 100%;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .activity-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: var(--spacing-sm);
+            cursor: pointer;
+        }
+
+        .activity-text {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+            text-align: center;
+        }
+
+        .activity-illustration {
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .activity-button {
+            background: white;
+            border: 1px solid var(--text-placeholder);
+            border-radius: var(--radius-md);
+            padding: 4px 12px;
+            font-size: var(--font-size-xs);
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .activity-button:hover {
+            background: var(--bg-page);
+        }
+
+        /* 浮层样式 */
+        .overlay-wrapper {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+        }
+
+        .overlay-backdrop {
+            position: absolute;
+            inset: 0;
+            background: transparent;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .overlay-content {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 320px;
+            text-align: center;
+            animation: slideUp 0.3s ease;
+        }
+
+        .overlay-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl) var(--spacing-lg);
+            width: 100%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .energy-help-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin: var(--spacing-md) 0;
+        }
+
+        .energy-logo {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .energy-help-content p {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            line-height: 1.4;
+            margin: 0;
+            word-wrap: break-word;
+        }
+
+        .overlay-header {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .completion-info {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            word-wrap: break-word;
+        }
+
+        .energy-circle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .energy-ring {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6B73FF, #00F2FE);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 0 30px rgba(107, 115, 255, 0.5);
+        }
+
+        .energy-ring::before {
+            content: '';
+            position: absolute;
+            width: 105px;
+            height: 105px;
+            border-radius: 50%;
+            background: white;
+        }
+
+        .energy-value {
+            position: relative;
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-bold);
+            color: #6B73FF;
+        }
+
+        .energy-label {
+            margin-top: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+        }
+
+        .energy-description {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xl);
+            word-wrap: break-word;
+        }
+
+        .energy-help-content {
+            margin-bottom: var(--spacing-xl);
+            text-align: left;
+        }
+
+        .energy-help-content p {
+            font-size: var(--font-size-md);
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .footer-tip {
+            font-size: var(--font-size-xs);
+            color: var(--text-placeholder);
+        }
+
+        /* 默认竖屏布局 */
+        .page-layout {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            width: 100%;
+        }
+
+        .zone-p1 {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        .zone-p0 {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .activity-list {
+            display: flex;
+            flex-direction: row;
+            gap: var(--spacing-sm);
+        }
+
+        .activity-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+            aspect-ratio: 1;
+        }
+
+        .activity-arrow {
+            display: none;
+        }
+
+        /* 横屏布局 */
+        @media (orientation: landscape) {
+            .completion-page {
+                max-width: none;
+            }
+
+            .page-body {
+                padding: 0 var(--spacing-lg) var(--spacing-lg);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .page-layout {
+                display: flex;
+                flex-direction: row;
+                gap: var(--spacing-md);
+                align-items: stretch;
+                width: 90%;
+                max-width: 1200px;
+                min-height: 600px;
+                margin-left: auto;
+                margin-right: 5%;
+            }
+
+            .zone-p1 {
+                width: 42%;
+                gap: var(--spacing-sm);
+            }
+
+            .zone-p0 {
+                width: 30%;
+            }
+
+            .zone-p2 {
+                width: 18%;
+                min-width: 180px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .result-card {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding: var(--spacing-md);
+            }
+
+            .result-header {
+                margin-bottom: var(--spacing-md);
+                width: 100%;
+                flex: 1;
+            }
+
+            .result-header .result-title {
+                font-size: var(--font-size-lg);
+                display: block;
+                margin: 0;
+                padding: 0;
+            }
+
+            .result-header .result-knowledge {
+                font-size: var(--font-size-md);
+                display: block;
+                margin: 0;
+                margin-top: var(--spacing-xs);
+                padding: 0;
+            }
+
+            .user-info {
+                margin-bottom: var(--spacing-md);
+                width: 100%;
+                flex: 1;
+            }
+
+            .user-stats-wrapper {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .user-stats {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: var(--spacing-xs);
+                width: 100%;
+            }
+
+            .user-level {
+                font-size: var(--font-size-md);
+                text-align: left;
+            }
+
+            .user-exp {
+                display: flex;
+                align-items: center;
+            }
+
+            .exp-label,
+            .exp-value {
+                font-size: var(--font-size-sm);
+            }
+
+            .section-subtitle {
+                font-size: var(--font-size-md);
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .rewards-section {
+                margin-bottom: var(--spacing-md);
+                width: 100%;
+                flex: 1;
+            }
+
+            .reward-name,
+            .reward-value {
+                font-size: var(--font-size-sm);
+            }
+
+            .tasks-section {
+                margin-bottom: 0;
+                width: 100%;
+                flex: 1;
+            }
+
+            .task-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+                padding: var(--spacing-xs) 0;
+            }
+
+            .task-text {
+                font-size: var(--font-size-sm);
+                flex: 1;
+            }
+
+            .task-status {
+                font-size: var(--font-size-sm);
+                text-align: right;
+                flex-shrink: 0;
+                margin-left: var(--spacing-md);
+            }
+
+            .next-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .next-card {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                justify-content: flex-start;
+                padding: var(--spacing-md);
+            }
+
+            .next-card-header {
+                width: 100%;
+                text-align: left;
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .next-card-title {
+                font-size: var(--font-size-sm);
+            }
+
+            .next-card-cover {
+                width: 100%;
+                margin-bottom: 0;
+            }
+
+            .video-preview {
+                width: 100%;
+                aspect-ratio: 16/9;
+                margin-bottom: 0;
+            }
+
+            .video-preview svg {
+                width: 100%;
+                height: 100%;
+            }
+
+            .video-info {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: rgba(0, 0, 0, 0.6);
+                color: white;
+                padding: 2px var(--spacing-xs);
+                font-size: var(--font-size-xs);
+                border-radius: 0 0 var(--radius-md) var(--radius-md);
+                width: 100%;
+            }
+
+            .next-card-footer {
+                width: 100%;
+                margin-top: 0;
+            }
+
+            .lesson-meta {
+                justify-content: flex-start;
+                margin-top: 0;
+            }
+
+            .lesson-type,
+            .lesson-difficulty,
+            .lesson-tag,
+            .lesson-free {
+                font-size: var(--font-size-xs);
+                padding: 2px var(--spacing-xs);
+            }
+
+            .activity-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .activity-list {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+
+            .activity-item {
+                flex: 1;
+                text-align: left;
+                aspect-ratio: unset;
+                overflow: hidden;
+            }
+
+            .activity-img {
+                width: 100%;
+                min-height: 100px;
+                height: 100%;
+                margin-bottom: 0;
+            }
+
+            .activity-placeholder {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                padding: var(--spacing-sm);
+            }
+
+            .activity-text {
+                font-size: var(--font-size-sm);
+                font-weight: var(--font-weight-medium);
+                color: var(--text-primary);
+                margin-bottom: var(--spacing-xs);
+                text-align: center;
+            }
+
+            .activity-illustration {
+                margin-bottom: var(--spacing-xs);
+            }
+
+            .activity-illustration svg {
+                width: 50px;
+                height: 50px;
+            }
+
+            .activity-button {
+                background: white;
+                border: 1px solid var(--text-placeholder);
+                border-radius: var(--radius-md);
+                padding: 4px 12px;
+                font-size: var(--font-size-xs);
+                color: var(--text-primary);
+                cursor: pointer;
+            }
+
+            .activity-button:hover {
+                background: var(--bg-page);
+            }
+
+            .overlay-content {
+                max-width: 500px;
+            }
+
+            .overlay-card {
+                padding: var(--spacing-xxl) var(--spacing-xl);
+            }
+
+            .overlay-header {
+                margin-bottom: var(--spacing-xxl);
+            }
+
+            .completion-info {
+                font-size: var(--font-size-lg);
+            }
+
+            .energy-ring {
+                width: 160px;
+                height: 160px;
+            }
+
+            .energy-ring::before {
+                width: 140px;
+                height: 140px;
+            }
+
+            .energy-value {
+                font-size: var(--font-size-xxl);
+            }
+
+            .energy-label {
+                margin-top: var(--spacing-md);
+                font-size: var(--font-size-md);
+            }
+
+            .energy-description {
+                font-size: var(--font-size-md);
+                margin-bottom: var(--spacing-xxl);
+            }
+
+            .footer-tip {
+                font-size: var(--font-size-sm);
+            }
+        }
+
+        /* 手机横屏适配 (viewport-width ≥ 375 且 viewport-width < 1024 且 viewport-height < 640) */
+        @media (min-width: 375px) and (max-width: 1023px) and (max-height: 639px) and (orientation: landscape) {
+            .page-body {
+                padding: 0 var(--spacing-md) var(--spacing-md);
+            }
+
+            .page-layout {
+                width: 95%;
+                max-width: none;
+                min-height: 277px;
+                margin-left: auto;
+                margin-right: auto;
+                gap: var(--spacing-sm);
+            }
+
+            .zone-p1 {
+                width: 38%;
+                gap: var(--spacing-xs);
+            }
+
+            .zone-p0 {
+                width: 34%;
+            }
+
+            .zone-p2 {
+                width: 18%;
+                min-width: 160px;
+            }
+
+            .result-card {
+                padding: var(--spacing-sm);
+            }
+
+            .result-header {
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .result-header .result-title {
+                font-size: var(--font-size-md);
+            }
+
+            .result-header .result-knowledge {
+                font-size: var(--font-size-sm);
+            }
+
+            .user-info {
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .user-avatar svg {
+                width: 36px;
+                height: 36px;
+            }
+
+            .user-stats {
+                margin-bottom: 4px;
+            }
+
+            .user-level {
+                font-size: var(--font-size-sm);
+            }
+
+            .exp-label,
+            .exp-value {
+                font-size: var(--font-size-xs);
+            }
+
+            .exp-bar {
+                height: 4px;
+            }
+
+            .section-subtitle {
+                font-size: var(--font-size-xs);
+                margin-bottom: 4px;
+            }
+
+            .rewards-section {
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .reward-icon svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .reward-name,
+            .reward-value {
+                font-size: var(--font-size-xs);
+            }
+
+            .tasks-section {
+                margin-bottom: 0;
+            }
+
+            .task-item {
+                padding: 4px 0;
+            }
+
+            .task-text,
+            .task-status {
+                font-size: var(--font-size-xs);
+            }
+
+            .next-card {
+                padding: var(--spacing-sm);
+            }
+
+            .next-card-header {
+                margin-bottom: 4px;
+            }
+
+            .next-card-title {
+                font-size: var(--font-size-xs);
+            }
+
+            .lesson-type,
+            .lesson-difficulty,
+            .lesson-tag,
+            .lesson-free {
+                font-size: 10px;
+                padding: 2px 4px;
+            }
+
+            .activity-text {
+                font-size: var(--font-size-xs);
+                margin-bottom: 4px;
+            }
+
+            .activity-illustration svg {
+                width: 40px;
+                height: 40px;
+            }
+
+            .activity-button {
+                padding: 2px 8px;
+                font-size: 10px;
+            }
+
+            /* 优化浮层卡片尺寸 */
+            .overlay-content {
+                max-width: 280px;
+            }
+
+            .overlay-card {
+                padding: var(--spacing-lg) var(--spacing-md);
+            }
+
+            .overlay-header {
+                margin-bottom: var(--spacing-lg);
+            }
+
+            .completion-info {
+                font-size: var(--font-size-sm);
+            }
+
+            .energy-ring {
+                width: 120px;
+                height: 120px;
+            }
+
+            .energy-ring::before {
+                width: 105px;
+                height: 105px;
+            }
+
+            .energy-value {
+                font-size: var(--font-size-xl);
+            }
+
+            .energy-label {
+                margin-top: var(--spacing-sm);
+                font-size: var(--font-size-sm);
+            }
+
+            .energy-description {
+                font-size: var(--font-size-xs);
+                margin-bottom: var(--spacing-lg);
+            }
+
+            .footer-tip {
+                font-size: var(--font-size-xs);
+            }
+        }
+
+        /* 平板竖屏适配 */
+        @media (min-width: 640px) and (orientation: portrait) {
+            .completion-page {
+                max-width: 640px;
+                margin: 0 auto;
+            }
+
+            .page-header-simple {
+                padding: var(--spacing-xl);
+            }
+
+            .page-body {
+                padding: 0 var(--spacing-xl) var(--spacing-xl);
+            }
+
+            .result-card {
+                padding: var(--spacing-xxl) var(--spacing-xl);
+            }
+
+            .activity-list {
+                gap: var(--spacing-lg);
+            }
+
+            .activity-item {
+                overflow: hidden;
+            }
+
+            .activity-img {
+                width: 100%;
+                min-height: 150px;
+                height: 100%;
+                margin-bottom: 0;
+            }
+
+            .activity-placeholder {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                padding: var(--spacing-sm);
+            }
+
+            .activity-text {
+                font-size: var(--font-size-md);
+                font-weight: var(--font-weight-medium);
+                color: var(--text-primary);
+                margin-bottom: var(--spacing-xs);
+                text-align: center;
+            }
+
+            .activity-illustration {
+                margin-bottom: var(--spacing-xs);
+            }
+
+            .activity-illustration svg {
+                width: 70px;
+                height: 70px;
+            }
+
+            .activity-button {
+                background: white;
+                border: 1px solid var(--text-placeholder);
+                border-radius: var(--radius-md);
+                padding: 6px 16px;
+                font-size: var(--font-size-sm);
+                color: var(--text-primary);
+                cursor: pointer;
+            }
+
+            .activity-button:hover {
+                background: var(--bg-page);
+            }
+
+            .next-card {
+                padding: var(--spacing-xl);
+                width: 100%;
+            }
+
+            .video-preview {
+                width: 100%;
+            }
+
+            .video-preview svg {
+                width: 100%;
+            }
+
+            .video-info {
+                width: 100%;
+            }
+        }
+
+        /* 平板横屏适配 */
+        @media (min-width: 1024px) and (orientation: landscape) {
+            .page-header-simple {
+                padding: var(--spacing-xxl);
+            }
+
+            .back-text {
+                font-size: var(--font-size-lg);
+            }
+
+            .page-body {
+                max-width: 100%;
+                margin: 0 auto;
+                padding: 0 var(--spacing-md) var(--spacing-md);
+                display: flex;
+                align-items: stretch;
+            }
+
+            .zone-p1 {
+                width: 30%;
+                gap: var(--spacing-sm);
+            }
+
+            .zone-p0 {
+                width: 40%;
+            }
+
+            .result-card {
+                padding: var(--spacing-lg) var(--spacing-md);
+            }
+
+            .result-header .result-title {
+                font-size: var(--font-size-xl);
+            }
+
+            .result-header .result-knowledge {
+                font-size: var(--font-size-md);
+                display: inline;
+                margin-left: var(--spacing-xs);
+            }
+
+            .section-title {
+                font-size: var(--font-size-lg);
+            }
+
+            .next-card {
+                padding: var(--spacing-lg);
+                width: 100%;
+            }
+
+            .video-preview {
+                width: 100%;
+            }
+
+            .video-preview svg {
+                width: 100%;
+            }
+
+            .video-info {
+                width: 100%;
+            }
+
+            .next-card-title {
+                font-size: var(--font-size-md);
+            }
+
+            .activity-item {
+                overflow: hidden;
+            }
+
+            .activity-img {
+                width: 100%;
+                min-height: 120px;
+                height: 100%;
+                margin-right: 0;
+            }
+
+            .activity-placeholder {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                padding: var(--spacing-sm);
+            }
+
+            .activity-text {
+                font-size: var(--font-size-sm);
+                font-weight: var(--font-weight-medium);
+                color: var(--text-primary);
+                margin-bottom: var(--spacing-xs);
+                text-align: center;
+            }
+
+            .activity-illustration {
+                margin-bottom: var(--spacing-xs);
+            }
+
+            .activity-illustration svg {
+                width: 60px;
+                height: 60px;
+            }
+
+            .activity-button {
+                background: white;
+                border: 1px solid var(--text-placeholder);
+                border-radius: var(--radius-md);
+                padding: 4px 12px;
+                font-size: var(--font-size-xs);
+                color: var(--text-primary);
+                cursor: pointer;
+            }
+
+            .activity-button:hover {
+                background: var(--bg-page);
+            }
+        }
+
+        /* 动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 知识点完成页 (默认显示) -->
+    <div class="completion-page" id="completionPage" style="display: block;">
+        <!-- 页面头部 - 只保留返回箭头和文字 -->
+        <div class="page-header-simple">
+            <div class="back-button" onclick="handleBack()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M15 18L9 12L15 6" stroke="#2E2E3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="back-text">返回</span>
+            </div>
+        </div>
+
+        <main class="page-body">
+            <div class="page-layout">
+                <div class="zone-p1">
+                    <section class="result-card">
+                        <div class="result-header">
+                            <h2 class="result-title">完成知识点</h2>
+                            <div class="result-knowledge">相交线与平行线的引入</div>
+                        </div>
+                        
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                    <circle cx="24" cy="24" r="24" fill="#E6F7FF"/>
+                                    <path d="M24 16C27.3137 16 30 18.6863 30 22C30 25.3137 27.3137 28 24 28C20.6863 28 18 25.3137 18 22C18 18.6863 20.6863 16 24 16Z" stroke="#1890FF" stroke-width="2"/>
+                                    <path d="M14 38C14 34.6863 16.6863 32 20 32H28C31.3137 32 34 34.6863 34 38" stroke="#1890FF" stroke-width="2"/>
+                                </svg>
+                            </div>
+                            <div class="user-stats-wrapper">
+                                <div class="user-stats">
+                                    <div class="user-level">Lv4</div>
+                                    <div class="user-exp">
+                                        <span class="exp-label">经验值:</span>
+                                        <span class="exp-value">5/35</span>
+                                    </div>
+                                </div>
+                                <div class="exp-bar">
+                                    <div class="exp-progress" style="width: 14.29%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rewards-section">
+                            <h3 class="section-subtitle">获得奖励</h3>
+                            <div class="reward-item">
+                                <div class="reward-icon">
+                                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                        <circle cx="16" cy="16" r="16" fill="#FFF7E6"/>
+                                        <path d="M16 8V16L20 20" stroke="#FF6B00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="reward-info">
+                                    <span class="reward-name">葱能 <button class="help-button" onclick="showEnergyHelp()"><span class="help-icon">?</span></button></span>
+                                    <span class="reward-value">+10</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tasks-section">
+                            <h3 class="section-subtitle">完成任务</h3>
+                            <div class="task-item">
+                                <span class="task-text">完成1次教材同步课</span>
+                                <span class="task-status">已完成</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="zone-p0">
+                    <section class="next-section">
+                        <div class="next-card" onclick="handleNextLesson()">
+                            <div class="next-card-header">
+                                <h3 class="next-card-title">下一步学习</h3>
+                            </div>
+                            <div class="next-card-cover">
+                                <div class="video-preview" onclick="playVideo()">
+                                    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" fill="none">
+                                        <rect width="100" height="100" rx="8" fill="#F0F0F0"/>
+                                    </svg>
+                                    <div class="play-button">
+                                        <svg width="50" height="50" viewBox="0 0 50 50" fill="none">
+                                            <circle cx="25" cy="25" r="25" fill="rgba(0, 0, 0, 0.5)"/>
+                                            <path d="M20 15L30 25L20 35V15Z" fill="white"/>
+                                        </svg>
+                                    </div>
+                                    <div class="video-info">
+                                        <span class="video-title">什么是对顶角</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="next-card-footer">
+                                <div class="lesson-meta">
+                                    <span class="lesson-type">概念课</span>
+                                    <span class="lesson-difficulty">难度 ★★</span>
+                                    <span class="lesson-tag">课前预习</span>
+                                    <span class="lesson-free">免费</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="zone-p2">
+                    <section class="activity-section">
+                        <div class="activity-list">
+                            <div class="activity-item" onclick="handleActivity('企微线索')">
+                                <div class="activity-img" style="background: linear-gradient(135deg, #E6F7FF, #BAE7FF);">
+                                    <div class="activity-placeholder" onclick="redirectToWechat('企微线索')">
+                                        <div class="activity-text">企微线索待领取</div>
+                                        <div class="activity-illustration">
+                                            <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+                                                <circle cx="30" cy="20" r="10" fill="#1890FF"/>
+                                                <path d="M25 35L35 35" stroke="#1890FF" stroke-width="2" stroke-linecap="round"/>
+                                                <path d="M20 45L40 45" stroke="#1890FF" stroke-width="2" stroke-linecap="round"/>
+                                                <path d="M15 35L20 40" stroke="#1890FF" stroke-width="2" stroke-linecap="round"/>
+                                                <path d="M45 35L40 40" stroke="#1890FF" stroke-width="2" stroke-linecap="round"/>
+                                            </svg>
+                                        </div>
+                                        <button class="activity-button">去领取</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="activity-item" onclick="handleActivity('周周有礼')">
+                                <div class="activity-img" style="background: linear-gradient(135deg, #FFF7E6, #FFE7BA);">
+                                    <div class="activity-placeholder" onclick="redirectToWechat('周周有礼')">
+                                        <div class="activity-text">周周有礼待领取</div>
+                                        <div class="activity-illustration">
+                                            <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+                                                <circle cx="30" cy="20" r="10" fill="#FF6B00"/>
+                                                <path d="M25 35L35 35" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"/>
+                                                <path d="M20 45L40 45" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"/>
+                                                <path d="M15 35L20 40" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"/>
+                                                <path d="M45 35L40 40" stroke="#FF6B00" stroke-width="2" stroke-linecap="round"/>
+                                            </svg>
+                                        </div>
+                                        <button class="activity-button">去领取</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- 结束学习任务浮层 (默认显示) -->
+    <div class="overlay-wrapper" id="completionOverlay" style="display: flex;">
+        <div class="overlay-backdrop" onclick="hideOverlay()"></div>
+        <div class="overlay-content">
+            <div class="overlay-card" onclick="hideOverlay()">
+                <div class="overlay-header">
+                    <h3 class="completion-info">完成知识点：相交线与平行线的引入</h3>
+                </div>
+                
+                <div class="energy-circle">
+                    <div class="energy-ring">
+                        <div class="energy-value">110</div>
+                    </div>
+                    <div class="energy-label">获得葱能</div>
+                </div>
+                
+                <div class="energy-description">前往「星球」领取葱能奖励吧！</div>
+                
+                <div class="overlay-footer">
+                    <div class="footer-tip">点击屏幕任意处继续</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 葱能帮助浮层 -->
+    <div class="overlay-wrapper" id="energyHelpOverlay" style="display: none;">
+        <div class="overlay-backdrop" onclick="hideEnergyHelp()"></div>
+        <div class="overlay-content">
+            <div class="overlay-card" onclick="hideEnergyHelp()">
+                <div class="overlay-header">
+                    <h3 class="completion-info">关于葱能</h3>
+                </div>
+                
+                <div class="energy-help-content">
+                    <div class="energy-logo">
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                            <circle cx="32" cy="32" r="32" fill="#FFF7E6"/>
+                            <path d="M32 16V32L40 40" stroke="#FF6B00" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <p>葱能是一种学习积分，通过完成学习任务获得，可以用于兑换学习资源和奖励。</p>
+                </div>
+                
+                <div class="overlay-footer">
+                    <div class="footer-tip">点击屏幕任意处关闭</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面交互逻辑
+        function handleBack() {
+            // 跳转到课程页面
+            window.location.href = 'course-page.html';
+        }
+
+        function handleNextLesson() {
+            console.log('下一步学习');
+            // 这里可以添加下一步学习逻辑
+        }
+
+        function handleActivity(activity) {
+            console.log('点击活动:', activity);
+            // 这里可以添加活动点击逻辑
+        }
+
+        function showOverlay() {
+            document.getElementById('completionOverlay').style.display = 'flex';
+            document.getElementById('completionPage').style.opacity = '0.5';
+        }
+
+        function hideOverlay() {
+            document.getElementById('completionOverlay').style.display = 'none';
+            document.getElementById('completionPage').style.opacity = '1';
+        }
+
+        function showEnergyHelp() {
+            document.getElementById('energyHelpOverlay').style.display = 'flex';
+            document.getElementById('completionPage').style.opacity = '0.5';
+        }
+
+        function hideEnergyHelp() {
+            document.getElementById('energyHelpOverlay').style.display = 'none';
+            document.getElementById('completionPage').style.opacity = '1';
+        }
+
+        function playVideo() {
+            // 跳转到视频播放页面
+            window.location.href = 'video-player.html';
+        }
+
+        function redirectToWechat(activity) {
+            // 跳转到微信小程序
+            window.location.href = 'wechat-redirect.html?activity=' + encodeURIComponent(activity);
+        }
+
+        // 初始状态：显示浮层，完成页半透明
+        // 页面加载时自动执行
+        window.onload = function() {
+            showOverlay();
+        };
+    </script>
+</body>
+</html>

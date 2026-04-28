@@ -1,0 +1,3706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>知识点完成页 - 响应式</title>
+    <style>
+        /* 全局样式 */
+        :root {
+            --primary-orange: #FF6B00;
+            --text-primary: #2E2E3A;
+            --text-secondary: #595959;
+            --text-placeholder: #8C8C8C;
+            --bg-page: #f5f0e1; /* 米黄色背景，和课程笔记页面风格一致 */
+            --bg-card: #FFFFFF;
+            --border-color: #E8E8E8;
+            --overlay: rgba(0, 0, 0, 0.5);
+            --success: #52C41A;
+            --primary-gradient: linear-gradient(135deg, #FF6B00, #FF9E43);
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-xxl: 40px;
+            --font-size-xs: 12px;
+            --font-size-sm: 14px;
+            --font-size-md: 16px;
+            --font-size-lg: 18px;
+            --font-size-xl: 20px;
+            --font-size-xxl: 24px;
+            --font-weight-medium: 500;
+            --font-weight-bold: 600;
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --radius-full: 9999px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            line-height: 1.5;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 背景装饰元素 - 二次元铅笔 */
+        .deco-pencil {
+            position: fixed;
+            z-index: 1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* 背景装饰元素 - 二次元橡皮 */
+        .deco-eraser {
+            position: fixed;
+            z-index: 1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* 竖屏模式：铅笔在上方，橡皮在下方，调整位置避免遮挡内容 */
+        @media (orientation: portrait) {
+            .deco-pencil {
+                top: -50px;
+                left: -40px;
+                width: 200px;
+                transform: rotate(30deg);
+            }
+            
+            .deco-eraser {
+                bottom: -40px;
+                right: -30px;
+                width: 140px;
+                transform: rotate(-15deg);
+            }
+        }
+
+        /* 横屏模式：铅笔在左侧，橡皮在右侧，调整位置避免遮挡内容 */
+        @media (orientation: landscape) {
+            .deco-pencil {
+                left: -70px;
+                top: 50%;
+                transform: translateY(-50%) rotate(-60deg);
+                width: 250px;
+            }
+            
+            .deco-eraser {
+                right: -60px;
+                top: 50%;
+                transform: translateY(-50%) rotate(25deg);
+                width: 170px;
+            }
+        }
+
+        /* 确保所有卡片在装饰元素上方，不会被遮挡 */
+        .result-card, .next-card, .activity-item, .page-header, .zone-p1, .zone-p0, .zone-p2 {
+            position: relative;
+            z-index: 2;
+            z-index: 1;
+        }
+
+        .flex-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .touchable {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .touchable:active {
+            transform: scale(0.98);
+        }
+
+        .text-ellipsis-1 {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .text-ellipsis-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* 页面容器 */
+        .completion-page {
+            min-height: 100vh;
+            min-height: 100dvh;
+            background: var(--bg-page);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 简化的页面头部 */
+        .page-header-simple {
+            padding: var(--spacing-md);
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .back-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .back-text {
+            margin-left: var(--spacing-sm);
+            font-size: var(--font-size-md);
+            color: var(--text-primary);
+        }
+
+        /* 页面内容 */
+        .page-body {
+            flex: 1;
+            padding: 0 var(--spacing-md) var(--spacing-md);
+            transition: padding 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 布局容器 */
+        .page-layout {
+            transition: gap 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 区域容器 */
+        .zone-p1,
+        .zone-p0,
+        .zone-p2 {
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 卡片容器 */
+        .result-card,
+        .next-card,
+        .activity-item {
+            transition: padding 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 文本和间距 */
+        .result-header,
+        .user-info,
+        .rewards-section,
+        .tasks-section,
+        .next-card-header,
+        .next-card-cover,
+        .next-card-footer,
+        .activity-list {
+            transition: margin 0.5s cubic-bezier(0.4, 0, 0.2, 1), gap 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 字体大小 */
+        .result-title,
+        .result-knowledge,
+        .user-level,
+        .exp-label,
+        .exp-value,
+        .section-subtitle,
+        .reward-name,
+        .reward-value,
+        .task-text,
+        .task-status,
+        .next-card-title,
+        .lesson-type,
+        .lesson-difficulty,
+        .lesson-tag,
+        .lesson-free,
+        .activity-text,
+        .activity-button {
+            transition: font-size 0.5s cubic-bezier(0.4, 0, 0.2, 1), line-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 浮层元素 */
+        .overlay-content,
+        .overlay-card,
+        .overlay-header,
+        .energy-ring,
+        .energy-value,
+        .energy-label,
+        .energy-description,
+        .footer-tip {
+            transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 通用样式 */
+        .result-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-lg) var(--spacing-md);
+            text-align: left;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            overflow-y: auto;
+        }
+
+        /* 分割线样式 */
+        .divider {
+            height: 1px;
+            background: #E8E8E8;
+            margin: var(--spacing-md) 0;
+            border: none;
+        }
+
+        .result-header {
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+        }
+
+        .result-header .result-title {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        .result-header .result-knowledge {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            display: block;
+            margin: 0;
+            margin-top: var(--spacing-xs);
+            flex: 1 0 100%;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .user-avatar {
+            margin-right: var(--spacing-md);
+        }
+
+        .user-stats-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .user-level {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            text-align: left;
+        }
+
+        .user-exp {
+            display: flex;
+            align-items: center;
+        }
+
+        .exp-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-placeholder);
+            margin-right: var(--spacing-xs);
+        }
+
+        .exp-value {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+
+        .exp-bar {
+            width: 100%;
+            height: 4px;
+            background: #F0F0F0;
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+
+        .exp-progress {
+            height: 100%;
+            background: var(--primary-gradient);
+            border-radius: var(--radius-full);
+        }
+
+        .section-subtitle {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .rewards-section {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .reward-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .reward-icon {
+            margin-right: var(--spacing-sm);
+        }
+
+        .reward-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .reward-info {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reward-name {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+        }
+
+        .help-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: var(--spacing-xs);
+            padding: 0;
+        }
+
+        .help-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--text-placeholder);
+            color: white;
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .test-button {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 4px 8px;
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-medium);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .test-button:hover {
+            background: var(--bg-hover);
+            border-color: var(--primary);
+        }
+
+        .reward-value {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--primary-orange);
+            text-align: right;
+        }
+
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-text {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .task-status {
+            font-size: var(--font-size-sm);
+            color: var(--text-placeholder);
+            text-align: right;
+        }
+
+        /* 学习目标达成 */
+        .learning-goals-section {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .goal-list {
+            list-style-type: disc;
+            padding-left: var(--spacing-lg);
+            margin: 0;
+        }
+
+        .goal-item {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        /* 横屏模式下的goal-item字体大小 */
+        @media (min-width: 768px) and (orientation: landscape) {
+            .goal-item {
+                font-size: var(--font-size-sm);
+            }
+        }
+
+        /* 课堂笔记解锁 */
+        .notes-section {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .note-preview {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .note-image {
+            flex: 1;
+        }
+
+        .note-action {
+            flex-shrink: 0;
+        }
+
+        .view-note {
+            font-size: var(--font-size-xs);
+            color: var(--primary-blue);
+            cursor: pointer;
+        }
+
+        /* 获得新成就 */
+        .achievements-section {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .achievement-item {
+            margin-top: var(--spacing-xs);
+        }
+
+        .achievement-badge {
+            display: inline-block;
+        }
+
+        .next-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+            width: 100%;
+            height: 300px;
+            overflow-y: auto;
+        }
+
+        .next-card-header {
+            margin-bottom: var(--spacing-sm);
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .next-card-title {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+        }
+
+        .placeholder-button {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 4px 8px;
+            font-size: var(--font-size-xs);
+            cursor: pointer;
+            font-weight: var(--font-weight-medium);
+        }
+
+        .placeholder-button:hover {
+            background: var(--bg-hover);
+            border-color: var(--primary);
+        }
+
+        .placeholder-image {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .placeholder-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background-color: #f5f5f5;
+            border-radius: var(--radius-md);
+        }
+
+        .next-card-cover {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .video-preview {
+            position: relative;
+            margin-bottom: var(--spacing-sm);
+            width: 100%;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            border-radius: var(--radius-md);
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: var(--radius-md);
+        }
+
+        .video-preview svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .video-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 2px var(--spacing-xs);
+            font-size: var(--font-size-sm);
+            border-radius: 0 0 var(--radius-md) var(--radius-md);
+            width: 100%;
+        }
+
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .play-button svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .next-card-footer {
+            width: 100%;
+            margin-top: 0;
+        }
+
+        .lesson-meta {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        .lesson-meta-placeholder {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            min-height: 24px; /* 确保占位元素与原始lesson-meta具有相同的高度 */
+        }
+
+        .promo-image-container {
+            margin-top: var(--spacing-sm);
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .promo-image {
+            width: 100%;
+            height: 60px; /* 严格限制高度 */
+            object-fit: cover;
+            border-radius: var(--radius-md);
+        }
+
+        .promo-image svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .lesson-meta span {
+            flex: 0 0 auto;
+        }
+
+        .lesson-type,
+        .lesson-difficulty,
+        .lesson-tag,
+        .lesson-free {
+            font-size: var(--font-size-sm);
+            padding: 1px 4px;
+            border-radius: var(--radius-sm);
+        }
+
+        .lesson-type {
+            background: #E6F7FF;
+            color: #1890FF;
+        }
+
+        .lesson-difficulty {
+            background: #FFF7E6;
+            color: #FA8C16;
+        }
+
+        .lesson-tag {
+            background: #F6FFED;
+            color: #52C41A;
+        }
+
+        .lesson-free {
+            background: #FFF1F0;
+            color: #F5222D;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .section-title {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+        }
+
+        .activity-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .activity-img {
+            position: relative;
+            width: 100%;
+            min-height: 120px;
+            height: 100%;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .activity-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: var(--radius-lg);
+            background-color: white;
+        }
+
+        .activity-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            color: white;
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        }
+
+        .activity-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: var(--spacing-sm);
+            cursor: pointer;
+        }
+
+        .activity-text {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+            text-align: center;
+        }
+
+        .activity-overlay .activity-text {
+            color: white;
+        }
+
+        .activity-illustration {
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .activity-button {
+            background: white;
+            border: 1px solid var(--text-placeholder);
+            border-radius: var(--radius-md);
+            padding: 4px 12px;
+            font-size: var(--font-size-xs);
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .activity-button:hover {
+            background: var(--bg-page);
+        }
+
+        /* 浮层样式 */
+        .overlay-wrapper {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            width: 100vw;
+            height: 100vh;
+            cursor: pointer;
+        }
+
+        .overlay-backdrop {
+            position: absolute;
+            inset: 0;
+            background: transparent;
+            animation: fadeIn 0.25s ease;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        .overlay-content {
+            position: relative;
+            z-index: 200; /* 浮层在全局遮罩上方 */
+            width: 100%;
+            max-width: 320px;
+            text-align: center;
+            animation: slideUp 0.3s ease;
+        }
+
+        .overlay-card {
+            /* 去掉白色卡片背景和阴影，保留内边距和圆角 */
+            background: transparent;
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl) var(--spacing-lg);
+            width: 100%;
+            box-shadow: none;
+        }
+
+        .energy-help-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin: var(--spacing-md) 0;
+        }
+
+        .energy-logo {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .energy-help-content p {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            line-height: 1.4;
+            margin: 0;
+            word-wrap: break-word;
+        }
+
+        .overlay-header {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .completion-info {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            word-wrap: break-word;
+        }
+
+        .energy-circle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        /* 定义进度变量 */
+        @property --progress {
+            syntax: '<percentage>';
+            inherits: false;
+            initial-value: 0%;
+        }
+        .energy-ring {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #E8F0FF; /* 未填充的背景色 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 0 30px rgba(107, 115, 255, 0.2);
+            overflow: hidden;
+        }
+        .ring-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: conic-gradient(#00F2FE 0%, #6B73FF var(--progress), transparent var(--progress), transparent 100%);
+            border-radius: 50%;
+            transform: rotate(-90deg); /* 永久固定起点在左侧9点钟位置，不会再旋转 */
+            transition: --progress 0.6s ease-out; /* 只动画进度百分比，没有旋转 */
+        }
+        .energy-ring.animate .ring-progress {
+            --progress: 10%; /* 直接增长到10%进度，从左侧向右填充，无整体旋转 */
+        }
+            .ring-inner {
+                position: absolute;
+                width: 100px;
+                height: 100px;
+                border-radius: 50%;
+                background: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1;
+            }
+            .energy-value {
+                font-size: var(--font-size-xl);
+                font-weight: var(--font-weight-bold);
+                color: #6B73FF;
+            }
+
+        .energy-label {
+            margin-top: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+        }
+
+        .energy-description {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xl);
+            word-wrap: break-word;
+        }
+
+        .energy-help-content {
+            margin-bottom: var(--spacing-xl);
+            text-align: left;
+        }
+
+        .energy-help-content p {
+            font-size: var(--font-size-md);
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .footer-tip {
+            font-size: var(--font-size-xs);
+            color: var(--text-placeholder);
+        }
+
+        /* 学霸之魂浮页样式 */
+        .soul-card {
+            text-align: center;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        .soul-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .soul-title {
+            font-size: var(--font-size-xl);
+            font-weight: bold;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        .help-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--text-placeholder);
+            color: white;
+            border: none;
+            font-weight: bold;
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .soul-image-wrapper {
+            width: 100%;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin-bottom: 24px;
+            background: transparent;
+        }
+        .soul-image {
+            width: 100%;
+            height: auto;
+            max-height: 200px;
+            object-fit: contain; /* 保证图片完整显示，不拉伸 */
+        }
+        .soul-desc {
+            font-size: var(--font-size-md);
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .footer-tip.highlight {
+            color: #ffffff !important;
+            font-weight: bold;
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            background: transparent !important;
+        }
+
+        /* 学霸之魂第二页样式 */
+        .soul-page {
+            width: 100%;
+        }
+        .level-icons {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            margin-bottom: 24px;
+        }
+        .level-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column-reverse; /* 反转顺序：文字在上，图标在下 */
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .level-item.active {
+            transform: scale(1.3); /* 放大更明显 */
+        }
+        .level-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF6B00, #FF9E43);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 8px; /* 调整间距，文字在上，图标在下 */
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .level-item.active .level-icon {
+            border: 3px solid #FFE100; /* 金色边框 */
+            box-shadow: 0 0 25px rgba(255, 184, 0, 0.7); /* 强发光效果 */
+        }
+        .icon-inner {
+            font-size: 24px;
+        }
+        .level-name {
+            font-size: var(--font-size-xs);
+            font-weight: bold;
+            color: var(--text-primary);
+            text-align: center;
+            line-height: 1.2;
+        }
+        .arrow {
+            color: var(--text-placeholder);
+            font-size: var(--font-size-md);
+            font-weight: bold;
+        }
+        .reward-desc {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .soul-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+        .btn {
+            padding: 10px 24px;
+            border-radius: var(--radius-full);
+            border: none;
+            font-size: var(--font-size-sm);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-gray {
+            background: #E0E0E0;
+            color: var(--text-secondary);
+        }
+        .btn-yellow {
+            background: linear-gradient(135deg, #FFB800, #FF8A00);
+            color: white;
+        }
+        .btn-white {
+            background: white;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* 竖屏适配：两行两列布局，隐藏箭头 */
+        @media (orientation: portrait) {
+            .level-icons {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px 16px;
+            }
+            .arrow {
+                display: none;
+            }
+            .level-item {
+                width: 100%;
+            }
+            .level-icon {
+                width: 64px;
+                height: 64px;
+            }
+            .level-name {
+                font-size: var(--font-size-sm);
+            }
+        }
+
+        /* 参与挑战弹窗样式 */
+        .challenge-card {
+            text-align: center;
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+        .challenge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+        .challenge-title {
+            font-size: var(--font-size-lg);
+            font-weight: bold;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: var(--font-size-xl);
+            color: var(--text-placeholder);
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+        }
+        .challenge-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF6B00, #FF9E43);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+        .challenge-icon .icon-inner {
+            font-size: 36px;
+        }
+        .challenge-desc {
+            font-size: var(--font-size-md);
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+        .challenge-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        /* 手机横屏适配-第二页 */
+        @media (min-width: 375px) and (max-width: 1023px) and (max-height: 639px) and (orientation: landscape) {
+            .level-icon {
+                width: 48px;
+                height: 48px;
+            }
+            .icon-inner {
+                font-size: 20px;
+            }
+            .level-name {
+                font-size: 10px;
+            }
+            .reward-desc {
+                font-size: var(--font-size-xs);
+                margin-bottom: 16px;
+            }
+            .btn {
+                padding: 8px 20px;
+                font-size: var(--font-size-xs);
+            }
+            .challenge-icon {
+                width: 64px;
+                height: 64px;
+            }
+            .challenge-icon .icon-inner {
+                font-size: 28px;
+            }
+            .challenge-desc {
+                font-size: var(--font-size-sm);
+                margin-bottom: 24px;
+            }
+        }
+
+        /* 学霸之魂帮助浮层样式 */
+        #soulHelpOverlay {
+            z-index: 210;
+        }
+        .help-card {
+            text-align: left;
+        }
+        .help-header {
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .help-title {
+            font-size: var(--font-size-lg);
+            font-weight: bold;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        .help-content {
+            margin-bottom: 24px;
+        }
+        .help-content p {
+            font-size: var(--font-size-md);
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+        .help-content ul {
+            padding-left: 20px;
+            margin: 0;
+        }
+        .help-content li {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        /* 横屏适配-学霸之魂 */
+        @media (orientation: landscape) {
+            .soul-image {
+                max-height: 160px;
+                height: auto;
+            }
+            .soul-title {
+                font-size: var(--font-size-lg);
+            }
+            .help-title {
+                font-size: var(--font-size-md);
+            }
+        }
+
+        /* 手机横屏适配-学霸之魂 */
+        @media (min-width: 375px) and (max-width: 1023px) and (max-height: 639px) and (orientation: landscape) {
+            .soul-card {
+                padding: var(--spacing-lg) var(--spacing-md);
+            }
+            .soul-header {
+                margin-bottom: 16px;
+            }
+            .soul-title {
+                font-size: var(--font-size-md);
+            }
+            .soul-image {
+                max-height: 120px;
+                height: auto;
+            }
+            .soul-desc {
+                font-size: var(--font-size-sm);
+                margin-bottom: 16px;
+            }
+            .help-content p {
+                font-size: var(--font-size-sm);
+                margin-bottom: 12px;
+            }
+            .help-content li {
+                font-size: var(--font-size-xs);
+            }
+        }
+
+        /* 成就解锁浮页样式 */
+        .achieve-card {
+            text-align: center;
+        }
+        .achievement-display {
+            margin: 24px 0;
+        }
+        .achievement-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .achievement-icon {
+            margin-bottom: 16px;
+            animation: bounce 1s ease infinite alternate;
+        }
+        .achievement-name {
+            font-size: var(--font-size-md);
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-8px); }
+        }
+
+        /* 星阶升级浮页样式 */
+        .star-card {
+            text-align: center;
+        }
+        .star-level-display {
+            margin: 24px 0;
+        }
+        .level-badge {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF6B00, #FF9E43);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .level-text {
+            font-size: var(--font-size-xxl);
+            font-weight: bold;
+            color: white;
+        }
+        .level-progress {
+            width: 80%;
+            margin: 0 auto;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #F0F0F0;
+            border-radius: var(--radius-full);
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-gradient);
+            border-radius: var(--radius-full);
+        }
+        .progress-text {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        /* 横屏下浮层统一适配 */
+        @media (orientation: landscape) {
+            .overlay-content {
+                max-width: 480px;
+                margin: 0 auto;
+            }
+            .soul-text {
+                font-size: var(--font-size-xxl);
+            }
+            .achievement-icon {
+                width: 100px;
+                height: 100px;
+            }
+            .level-badge {
+                width: 100px;
+                height: 100px;
+            }
+        }
+
+        /* 手机横屏下浮层适配 */
+        @media (min-width: 375px) and (max-width: 1023px) and (max-height: 639px) and (orientation: landscape) {
+            .overlay-content {
+                max-width: 360px;
+            }
+            .overlay-card {
+                padding: var(--spacing-lg) var(--spacing-md);
+            }
+            .soul-text {
+                font-size: var(--font-size-lg);
+            }
+            .energy-ring {
+                width: 100px;
+                height: 100px;
+            }
+            .energy-ring::before {
+                width: 85px;
+                height: 85px;
+            }
+            .achievement-icon {
+                width: 80px;
+                height: 80px;
+            }
+            .level-badge {
+                width: 80px;
+                height: 80px;
+                margin-bottom: 16px;
+            }
+        }
+
+        /* 默认竖屏布局 */
+        .page-layout {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            width: 100%;
+        }
+
+        .zone-p1 {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+            max-height: 300px;
+            overflow: hidden;
+        }
+
+        .result-card {
+            max-height: 100%;
+            overflow-y: auto;
+        }
+
+        .zone-p0 {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .activity-list {
+            display: flex;
+            flex-direction: row;
+            gap: var(--spacing-sm);
+        }
+
+        .activity-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+            aspect-ratio: 1;
+        }
+
+        .activity-arrow {
+            display: none;
+        }
+
+        .next-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 横屏布局 */
+        @media (orientation: landscape) {
+            .completion-page {
+                max-width: none;
+            }
+
+            .page-body {
+                padding: 0 var(--spacing-lg) var(--spacing-lg);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .page-layout {
+                display: flex;
+                flex-direction: row;
+                gap: var(--spacing-md);
+                align-items: stretch;
+                width: 94%; /* 减小左右边距，增加可用宽度 */
+                max-width: 1200px;
+                min-height: 600px;
+                margin-left: auto;
+                margin-right: auto; /* 居中对齐 */
+            }
+
+            .zone-p1 {
+                width: 41%; /* 增加P1宽度 */
+                gap: var(--spacing-sm);
+                align-self: flex-start;
+                max-height: 600px;
+                overflow: hidden;
+            }
+
+            .zone-p0 {
+                width: 39%; /* 调整P0宽度，和P1接近，同时预留P2空间 */
+                overflow: hidden;
+            }
+
+            /* 调整活页环位置适配新的宽度 */
+            .binder-rings {
+                left: calc(41% + 10px);
+            }
+
+            .zone-p2 {
+                width: auto;
+                min-width: 227px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .result-card {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                padding: var(--spacing-md);
+                overflow-y: auto;
+            }
+
+            .divider {
+                flex-shrink: 0;
+                width: 100%;
+                margin: var(--spacing-md) 0;
+            }
+
+            .result-header {
+                margin-bottom: var(--spacing-md);
+                width: 100%;
+            }
+
+            .result-header .result-title {
+                font-size: var(--font-size-lg);
+                display: block;
+                margin: 0;
+                padding: 0;
+            }
+
+            .result-header .result-knowledge {
+                font-size: var(--font-size-md);
+                display: block;
+                margin: 0;
+                margin-top: var(--spacing-xs);
+                padding: 0;
+            }
+
+            .user-info {
+                margin-bottom: var(--spacing-md);
+                width: 100%;
+                flex: 1;
+            }
+
+            .user-stats-wrapper {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .user-stats {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: var(--spacing-xs);
+                width: 100%;
+            }
+
+            .user-level {
+                font-size: var(--font-size-md);
+                text-align: left;
+            }
+
+            .user-exp {
+                display: flex;
+                align-items: center;
+            }
+
+            .exp-label,
+            .exp-value {
+                font-size: var(--font-size-sm);
+            }
+
+            .section-subtitle {
+                font-size: var(--font-size-md);
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .rewards-section {
+                margin-bottom: var(--spacing-md);
+                width: 100%;
+                flex: 1;
+            }
+
+            .notes-section {
+                margin-bottom: var(--spacing-md);
+                width: 100%;
+                flex: 1;
+            }
+
+            .reward-name,
+            .reward-value {
+                font-size: var(--font-size-sm);
+            }
+
+            .tasks-section {
+                margin-bottom: 0;
+                width: 100%;
+                flex: 1;
+            }
+
+            .task-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+                padding: var(--spacing-xs) 0;
+            }
+
+            .task-text {
+                font-size: var(--font-size-sm);
+                flex: 1;
+            }
+
+            .task-status {
+                font-size: var(--font-size-sm);
+                text-align: right;
+                flex-shrink: 0;
+                margin-left: var(--spacing-md);
+            }
+
+            .next-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+            .next-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: var(--spacing-md);
+            height: 300px;
+            overflow-y: auto; /* 当内容溢出时，允许卡片内部滚动 */
+        }
+
+            .next-card-header {
+                width: 100%;
+                text-align: left;
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .next-card-title {
+                font-size: var(--font-size-xl);
+            }
+
+            .next-card-cover {
+                width: 100%;
+                margin-bottom: 0;
+            }
+
+            .video-preview {
+                width: 100%;
+                aspect-ratio: 16/9;
+                margin-bottom: 0;
+            }
+
+            .video-preview svg {
+                width: 100%;
+                height: 100%;
+            }
+
+            .video-info {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: rgba(0, 0, 0, 0.6);
+                color: white;
+                padding: 2px var(--spacing-xs);
+                font-size: var(--font-size-xs);
+                border-radius: 0 0 var(--radius-md) var(--radius-md);
+                width: 100%;
+            }
+
+            .next-card-footer {
+                width: 100%;
+                margin-top: 0;
+            }
+
+            .lesson-meta {
+                justify-content: flex-start;
+                margin-top: 0;
+            }
+
+            .lesson-type,
+            .lesson-difficulty,
+            .lesson-tag,
+            .lesson-free {
+                font-size: var(--font-size-md);
+                padding: 2px var(--spacing-xs);
+            }
+
+            .activity-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .activity-list {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                gap: var(--spacing-lg);
+            }
+
+            .activity-item {
+                flex: none;
+                width: 227px;
+                height: 227px;
+                text-align: left;
+                aspect-ratio: unset;
+                overflow: hidden;
+            }
+
+            .activity-img {
+                width: 100%;
+                height: 100%;
+                margin-bottom: 0;
+            }
+
+            .activity-placeholder {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                padding: var(--spacing-sm);
+            }
+
+            .activity-text {
+                font-size: var(--font-size-sm);
+                font-weight: var(--font-weight-medium);
+                color: var(--text-primary);
+                margin-bottom: var(--spacing-xs);
+                text-align: center;
+            }
+
+            .activity-illustration {
+                margin-bottom: var(--spacing-xs);
+            }
+
+            .activity-illustration svg {
+                width: 50px;
+                height: 50px;
+            }
+
+            .activity-button {
+                background: white;
+                border: 1px solid var(--text-placeholder);
+                border-radius: var(--radius-md);
+                padding: 4px 12px;
+                font-size: var(--font-size-xs);
+                color: var(--text-primary);
+                cursor: pointer;
+            }
+
+            .activity-button:hover {
+                background: var(--bg-page);
+            }
+
+            .overlay-content {
+                max-width: 500px;
+            }
+
+            .overlay-card {
+                padding: var(--spacing-xxl) var(--spacing-xl);
+            }
+
+            .overlay-header {
+                margin-bottom: var(--spacing-xxl);
+            }
+
+            .completion-info {
+                font-size: var(--font-size-lg);
+            }
+
+            .energy-ring {
+                width: 160px;
+                height: 160px;
+            }
+            .ring-progress {
+                clip: rect(0, 160px, 160px, 80px);
+                transform: rotate(-90deg); /* 平板横屏下起点也固定在左侧 */
+            }
+            .energy-ring.animate .ring-progress {
+                transform: rotate(-54deg);
+            }
+            .ring-inner {
+                width: 135px;
+                height: 135px;
+            }
+            .energy-value {
+                font-size: var(--font-size-xxl);
+            }
+
+            .energy-label {
+                margin-top: var(--spacing-md);
+                font-size: var(--font-size-md);
+            }
+
+            .energy-description {
+                font-size: var(--font-size-md);
+                margin-bottom: var(--spacing-xxl);
+            }
+
+            .footer-tip {
+                font-size: var(--font-size-sm);
+            }
+        }
+
+        /* 手机横屏适配 (viewport-width ≥ 375 且 viewport-width < 1024 且 viewport-height < 640) */
+        @media (min-width: 375px) and (max-width: 1023px) and (max-height: 639px) and (orientation: landscape) {
+            .page-body {
+                padding: 0 var(--spacing-md) var(--spacing-md);
+            }
+
+            .page-layout {
+                width: 98%; /* 进一步缩小左右边距，增加可用宽度 */
+                max-width: none;
+                min-height: 277px;
+                margin-left: auto;
+                margin-right: auto;
+                gap: var(--spacing-sm);
+            }
+
+            .zone-p1 {
+                width: 39%; /* 增加P1宽度 */
+                gap: var(--spacing-xs);
+                align-self: flex-start;
+                max-height: 277px;
+                overflow: hidden;
+            }
+
+            .zone-p0 {
+                width: 39%; /* P0宽度和P1完全一致 */
+                flex: none; /* 禁用默认的flex:1，避免宽度被拉伸 */
+                height: 277px;
+                overflow: hidden;
+            }
+
+            /* 调整活页环位置适配手机横屏新宽度 */
+            .binder-rings {
+                left: calc(39% + 4px);
+            }
+
+            .zone-p2 {
+                width: auto;
+                min-width: 120px;
+            }
+
+            .result-card {
+                padding: var(--spacing-sm);
+                overflow-y: auto;
+            }
+
+            .result-header {
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .result-header .result-title {
+                font-size: var(--font-size-md);
+            }
+
+            .result-header .result-knowledge {
+                font-size: var(--font-size-sm);
+            }
+
+            .user-info {
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .divider {
+                width: 100%;
+                margin: var(--spacing-sm) 0;
+            }
+
+            .user-avatar svg {
+                width: 36px;
+                height: 36px;
+            }
+
+            .user-stats {
+                margin-bottom: 4px;
+            }
+
+            .user-level {
+                font-size: var(--font-size-sm);
+            }
+
+            .exp-label,
+            .exp-value {
+                font-size: var(--font-size-xs);
+            }
+
+            .exp-bar {
+                height: 4px;
+            }
+
+            .section-subtitle {
+                font-size: var(--font-size-xs);
+                margin-bottom: 4px;
+            }
+
+            .rewards-section {
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .reward-icon svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .reward-name,
+            .reward-value {
+                font-size: var(--font-size-xs);
+            }
+
+            .tasks-section {
+                margin-bottom: 0;
+            }
+
+            .task-item {
+                padding: 4px 0;
+            }
+
+            .task-text,
+            .task-status {
+                font-size: var(--font-size-xs);
+            }
+
+            .next-card {
+                padding: var(--spacing-sm);
+                height: 277px;
+                overflow-y: auto;
+                padding-bottom: 6px;
+            }
+
+            .next-card-cover {
+                width: 100%;
+                margin-bottom: 0;
+            }
+
+            .next-card-footer {
+                width: 100%;
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+
+            .promo-image-container {
+                margin-top: 4px;
+                margin-bottom: 2px;
+            }
+
+            .promo-image {
+                height: 48px;
+            }
+
+            .video-preview {
+                position: relative;
+                margin: 0 auto 4px;
+                width: 80%;
+                aspect-ratio: 16/9;
+                overflow: hidden;
+                flex-shrink: 0;
+            }
+
+            .video-preview svg {
+                width: 100%;
+                height: 100%;
+            }
+
+            .play-button {
+                width: 40px;
+                height: 40px;
+            }
+
+            .next-section {
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+            .next-card-header {
+                margin-bottom: 4px;
+            }
+
+            .next-card-title {
+                font-size: var(--font-size-md);
+            }
+
+            .lesson-type,
+            .lesson-difficulty,
+            .lesson-tag,
+            .lesson-free {
+                font-size: var(--font-size-xs);
+                padding: 2px 4px;
+            }
+
+            .activity-text {
+                font-size: var(--font-size-xs);
+                margin-bottom: 4px;
+            }
+
+            .activity-illustration svg {
+                width: 40px;
+                height: 40px;
+            }
+
+            .activity-button {
+                padding: 2px 8px;
+                font-size: 10px;
+            }
+
+            .activity-item {
+                flex: none;
+                width: 120px;
+                height: 136px; /* 增加卡片高度，确保图片完整显示 */
+                text-align: left;
+                overflow: hidden;
+            }
+
+            .activity-img {
+                width: 100%;
+                height: 100%;
+                margin-bottom: 0;
+            }
+
+            .activity-image {
+                width: 100%;
+                height: 100%;
+                object-fit: contain; /* 确保图片不被裁剪 */
+                border-radius: var(--radius-lg);
+            }
+
+            .activity-list {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                gap: 4px; /* 缩小两个卡片中间的距离，确保整体高度和P0卡片对齐 */
+                height: 100%;
+            }
+
+            /* 优化浮层卡片尺寸 */
+            .overlay-content {
+                max-width: 280px;
+            }
+
+            .overlay-card {
+                padding: var(--spacing-lg) var(--spacing-md);
+            }
+
+            .overlay-header {
+                margin-bottom: var(--spacing-lg);
+            }
+
+            .completion-info {
+                font-size: var(--font-size-sm);
+            }
+
+            .energy-ring {
+                width: 100px;
+                height: 100px;
+            }
+            .ring-progress {
+                clip: rect(0, 100px, 100px, 50px);
+                transform: rotate(-90deg); /* 手机横屏下起点也固定在左侧 */
+            }
+            .energy-ring.animate .ring-progress {
+                transform: rotate(-54deg);
+            }
+            .ring-inner {
+                width: 82px;
+                height: 82px;
+            }
+            .energy-value {
+                font-size: var(--font-size-lg);
+            }
+
+            .energy-label {
+                margin-top: var(--spacing-sm);
+                font-size: var(--font-size-sm);
+            }
+
+            .energy-description {
+                font-size: var(--font-size-xs);
+                margin-bottom: var(--spacing-lg);
+            }
+
+            .footer-tip {
+                font-size: var(--font-size-xs);
+            }
+        }
+
+        /* 平板竖屏适配 */
+        @media (min-width: 640px) and (orientation: portrait) {
+            .completion-page {
+                max-width: 640px;
+                margin: 0 auto;
+            }
+
+            .page-header-simple {
+                padding: var(--spacing-xl);
+            }
+
+            .page-body {
+                padding: 0 var(--spacing-xl) var(--spacing-xl);
+            }
+
+            .page-layout {
+                gap: var(--spacing-lg);
+            }
+
+            .result-card {
+                padding: var(--spacing-xxl) var(--spacing-xl);
+            }
+
+            .section-subtitle,
+            .reward-name,
+            .reward-value,
+            .task-text,
+            .task-status,
+            .goal-item {
+                font-size: var(--font-size-lg);
+            }
+
+            .result-header .result-knowledge {
+                font-size: var(--font-size-lg);
+            }
+
+            .user-level {
+                font-size: var(--font-size-lg);
+            }
+
+            .exp-label,
+            .exp-value {
+                font-size: var(--font-size-md);
+            }
+
+            .view-note {
+                font-size: var(--font-size-md);
+            }
+
+            .video-info {
+                font-size: var(--font-size-lg);
+                padding: var(--spacing-sm) var(--spacing-xs);
+            }
+
+            .lesson-meta,
+            .lesson-meta-placeholder {
+                font-size: var(--font-size-lg);
+            }
+
+            .lesson-type,
+            .lesson-difficulty,
+            .lesson-tag,
+            .lesson-free {
+                font-size: var(--font-size-lg);
+                padding: 4px var(--spacing-xs);
+            }
+
+            .result-header .result-title {
+                font-size: var(--font-size-xl);
+            }
+
+            .next-card-title {
+                font-size: var(--font-size-xl);
+            }
+
+            .activity-list {
+                gap: var(--spacing-lg);
+            }
+
+            .activity-item {
+                overflow: hidden;
+            }
+
+            .activity-img {
+                width: 100%;
+                min-height: 150px;
+                height: 100%;
+                margin-bottom: 0;
+            }
+
+            .activity-placeholder {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                padding: var(--spacing-sm);
+            }
+
+            .activity-text {
+                font-size: var(--font-size-md);
+                font-weight: var(--font-weight-medium);
+                color: var(--text-primary);
+                margin-bottom: var(--spacing-xs);
+                text-align: center;
+            }
+
+            .activity-illustration {
+                margin-bottom: var(--spacing-xs);
+            }
+
+            .activity-illustration svg {
+                width: 70px;
+                height: 70px;
+            }
+
+            .activity-button {
+                background: white;
+                border: 1px solid var(--text-placeholder);
+                border-radius: var(--radius-md);
+                padding: 6px 16px;
+                font-size: var(--font-size-sm);
+                color: var(--text-primary);
+                cursor: pointer;
+            }
+
+            .activity-button:hover {
+                background: var(--bg-page);
+            }
+
+            .next-card {
+                padding: var(--spacing-xl);
+                width: 100%;
+                height: 400px;
+                overflow-y: auto;
+            }
+
+            .next-card-cover {
+                width: 100%;
+                margin-bottom: 0;
+            }
+
+            .next-card-footer {
+                width: 100%;
+                margin-top: 0;
+            }
+
+            .video-preview {
+                position: relative;
+                margin-bottom: var(--spacing-sm);
+                width: 100%;
+                aspect-ratio: 16/9;
+            }
+
+            .video-preview svg {
+                width: 100%;
+                height: 100%;
+            }
+
+            .video-info {
+                width: 100%;
+            }
+
+            .next-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+        }
+
+        /* 平板横屏适配 */
+        @media (min-width: 1024px) and (orientation: landscape) {
+            .page-header-simple {
+                padding: var(--spacing-xxl);
+            }
+
+            .back-text {
+                font-size: var(--font-size-lg);
+            }
+
+            .page-body {
+                max-width: 100%;
+                margin: 0 auto;
+                padding: 0 var(--spacing-md) var(--spacing-md);
+                display: flex;
+                align-items: stretch;
+            }
+
+            .zone-p1 {
+                width: 37%; /* 增加P1宽度，和P0接近 */
+                gap: var(--spacing-sm);
+                align-self: flex-start;
+                max-height: 600px;
+                overflow: hidden;
+            }
+
+            .zone-p0 {
+                width: 39%; /* 微调P0宽度，和P1保持接近 */
+                flex: 1;
+                overflow: hidden;
+            }
+
+            /* 调整活页环位置适配平板横屏新宽度 */
+            .binder-rings {
+                left: calc(37% + 10px);
+            }
+
+            .result-card {
+                padding: var(--spacing-lg) var(--spacing-md);
+                overflow-y: auto;
+            }
+
+            .divider {
+                width: 100%;
+                margin: var(--spacing-md) 0;
+            }
+
+            .result-header .result-title {
+                font-size: var(--font-size-xl);
+            }
+
+            .result-header .result-knowledge {
+                font-size: var(--font-size-lg);
+                display: inline;
+                margin-left: var(--spacing-xs);
+            }
+
+            .user-level {
+                font-size: var(--font-size-lg);
+                text-align: left;
+            }
+
+            .exp-label,
+            .exp-value {
+                font-size: var(--font-size-md);
+            }
+
+            .view-note {
+                font-size: var(--font-size-md);
+            }
+
+            .section-title {
+                font-size: var(--font-size-lg);
+            }
+
+            .section-subtitle,
+            .reward-name,
+            .reward-value,
+            .task-text,
+            .task-status,
+            .goal-item {
+                font-size: var(--font-size-lg);
+            }
+
+            .next-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+            .next-card {
+                padding: var(--spacing-lg);
+                width: 100%;
+                flex: 1;
+                height: 350px;
+                overflow-y: auto;
+            }
+
+            .next-card-footer {
+                width: 100%;
+                margin-top: 0;
+            }
+
+            .video-preview {
+                position: relative;
+                margin-bottom: var(--spacing-sm);
+                width: 100%;
+                aspect-ratio: 16/9;
+            }
+
+            .video-preview svg {
+                width: 100%;
+                height: 100%;
+            }
+
+            .video-info {
+                width: 100%;
+                font-size: var(--font-size-lg);
+                padding: var(--spacing-sm) var(--spacing-xs);
+            }
+
+            .lesson-meta,
+            .lesson-meta-placeholder {
+                font-size: var(--font-size-lg);
+            }
+
+            .lesson-type,
+            .lesson-difficulty,
+            .lesson-tag,
+            .lesson-free {
+                font-size: var(--font-size-lg);
+                padding: 4px var(--spacing-xs);
+            }
+
+            .result-header .result-title {
+                font-size: var(--font-size-xl);
+            }
+
+            .next-card-title {
+                font-size: var(--font-size-xl);
+            }
+
+            .next-card-cover {
+                width: 100%;
+                margin-bottom: 0;
+            }
+
+            .promo-image-container {
+                margin-top: var(--spacing-sm);
+                width: 100%;
+                overflow: hidden;
+            }
+
+            .promo-image {
+                width: 100%;
+                height: 60px; /* 严格限制高度 */
+                object-fit: cover;
+                border-radius: var(--radius-md);
+            }
+
+            .promo-image svg {
+                width: 100%;
+                height: 100%;
+            }
+
+            .activity-item {
+                overflow: hidden;
+            }
+
+            .activity-img {
+                width: 100%;
+                min-height: 120px;
+                height: 100%;
+                margin-right: 0;
+            }
+
+            .activity-placeholder {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                padding: var(--spacing-sm);
+            }
+
+            .activity-text {
+                font-size: var(--font-size-sm);
+                font-weight: var(--font-weight-medium);
+                color: var(--text-primary);
+                margin-bottom: var(--spacing-xs);
+                text-align: center;
+            }
+
+            .activity-illustration {
+                margin-bottom: var(--spacing-xs);
+            }
+
+            .activity-illustration svg {
+                width: 60px;
+                height: 60px;
+            }
+
+            .activity-button {
+                background: white;
+                border: 1px solid var(--text-placeholder);
+                border-radius: var(--radius-md);
+                padding: 4px 12px;
+                font-size: var(--font-size-xs);
+                color: var(--text-primary);
+                cursor: pointer;
+            }
+
+            .activity-button:hover {
+                background: var(--bg-page);
+            }
+        }
+
+        /* 动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 修复灰色遮罩可见性和内部弹窗白色卡片保留 */
+        .global-mask {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: rgba(0, 0, 0, 0.7) !important; /* 加深透明度，确保可见 */
+            z-index: 100 !important;
+            display: none; /* 去掉!important，让JS可以控制显示 */
+        }
+        /* 隐藏每个浮层自己的半透明背景，统一用全局遮罩 */
+        #soulOverlay .overlay-backdrop,
+        #powerOverlay .overlay-backdrop,
+        #achieveOverlay .overlay-backdrop,
+        #starOverlay .overlay-backdrop {
+            display: none !important;
+        }
+        /* 主页面在遮罩下方，背景透明让装饰元素显示出来 */
+        #completionPage {
+            position: relative !important;
+            z-index: 10 !important;
+            background: transparent !important;
+        }
+
+        /* 装饰元素层级调整到页面下方、背景上方 */
+        .deco-pencil, .deco-eraser {
+            z-index: 9 !important;
+        }
+        /* 进入队列的四个浮层在遮罩上方，去掉白色背景 */
+        #soulOverlay, #powerOverlay, #achieveOverlay, #starOverlay {
+            z-index: 200 !important;
+        }
+        #soulOverlay .overlay-card,
+        #powerOverlay .overlay-card,
+        #achieveOverlay .overlay-card,
+        #starOverlay .overlay-card {
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+        /* 内部点击弹出的卡片保留白色背景和阴影（帮助弹窗、挑战确认弹窗） */
+        #soulHelpOverlay, #joinChallengeOverlay {
+            z-index: 300 !important;
+        }
+        #soulHelpOverlay .overlay-card,
+        #joinChallengeOverlay .overlay-card {
+            background: white !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        /* 葱能浮页标题去掉白色背景，字体改为白色 */
+        #powerOverlay .completion-info {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #ffffff !important;
+            padding: 0 !important;
+        }
+
+        /* 星阶、成就浮页标题去掉白色背景，改为白色字体 */
+        #starOverlay .completion-info,
+        #achieveOverlay .completion-info {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #ffffff !important;
+            padding: 0 !important;
+        }
+
+        /* 所有文字修改为白色 */
+        #soulOverlay .soul-title,
+        #soulOverlay .soul-desc,
+        #soulPage2Overlay .soul-title,
+        #soulPage2Overlay .level-name,
+        #powerOverlay .energy-label,
+        #powerOverlay .energy-description,
+        #powerOverlay .footer-tip,
+        #achieveOverlay .achievement-name,
+        #achieveOverlay .footer-tip,
+        #starOverlay .progress-text,
+        #starOverlay .energy-description,
+        #starOverlay .footer-tip {
+            color: #ffffff !important;
+        }
+
+        /* 学霸第二页奖励文案样式：纯白色字体，无背景边框阴影 */
+        #soulPage2Overlay .reward-desc {
+            color: #FFFFFF !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+
+        /* 浮页显示时禁止操作背景页面 */
+        .page-disabled {
+            pointer-events: none !important;
+            user-select: none !important;
+        }
+
+        /* 全局遮罩层和浮层内容点击都跳转下一页，确保任意位置点击有效 */
+        .global-mask,
+        .overlay-wrapper .overlay-content {
+            pointer-events: auto !important;
+            cursor: pointer;
+        }
+
+        /* 内部交互元素（按钮、可点击区域）阻止冒泡，点击这些元素不会触发全局下一页 */
+        .help-btn,
+        .soul-buttons .btn,
+        .level-item,
+        #joinChallengeOverlay .btn,
+        .overlay-card .close-btn {
+            pointer-events: auto !important;
+            cursor: pointer;
+        }
+        /* 横竖屏切换时禁用所有过渡动画，避免奇怪的补间效果 */
+        .disable-transitions,
+        .disable-transitions * {
+            transition: none !important;
+            animation: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- 全局灰色遮罩层：在页面上方、浮层下方，点击切换下一页 -->
+    <div class="global-mask" id="globalMask" onclick="nextOverlay()"></div>
+    <!-- 背景装饰元素：二次元铅笔 -->
+    <svg class="deco-pencil" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- 笔杆 -->
+        <rect x="40" y="10" width="140" height="40" rx="5" fill="#FFD166"/>
+        <rect x="40" y="10" width="20" height="40" rx="5 0 0 5" fill="#EF476F"/>
+        <rect x="160" y="10" width="20" height="40" rx="0 5 5 0" fill="#118AB2"/>
+        <!-- 笔芯 -->
+        <polygon points="40 30, 10 30, 25 15, 40 15" fill="#6B4F3B"/>
+        <polygon points="40 30, 10 30, 25 45, 40 45" fill="#533B2B"/>
+        <circle cx="20" cy="30" r="5" fill="#333333"/>
+        <!-- 装饰条纹 -->
+        <path d="M70 10 L70 50" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="3 3"/>
+        <path d="M90 10 L90 50" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="3 3"/>
+        <path d="M110 10 L110 50" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="3 3"/>
+        <!-- 高光 -->
+        <ellipse cx="100" cy="18" rx="30" ry="3" fill="#FFFFFF" opacity="0.5"/>
+    </svg>
+
+    <!-- 背景装饰元素：二次元橡皮 -->
+    <svg class="deco-eraser" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- 橡皮主体 -->
+        <rect x="10" y="10" width="100" height="60" rx="10" fill="#FF9F1C"/>
+        <rect x="10" y="10" width="100" height="30" rx="10 10 0 0" fill="#FFBF69"/>
+        <!-- 包装纸 -->
+        <rect x="20" y="30" width="80" height="20" fill="#FFFFFF"/>
+        <path d="M20 30 L100 30 L100 50 L20 50" fill="none" stroke="#E71D36" stroke-width="2" stroke-dasharray="5 3"/>
+        <!-- 表情 -->
+        <circle cx="50" cy="40" r="3" fill="#333333"/>
+        <circle cx="70" cy="40" r="3" fill="#333333"/>
+        <path d="M55 48 L65 48" stroke="#333333" stroke-width="2" stroke-linecap="round"/>
+        <!-- 高光 -->
+        <ellipse cx="60" cy="18" rx="35" ry="4" fill="#FFFFFF" opacity="0.6"/>
+    </svg>
+    <!-- 知识点完成页 (默认显示) -->
+    <div class="completion-page" id="completionPage" style="display: block;">
+        <!-- 页面头部 - 只保留返回箭头和文字 -->
+        <div class="page-header-simple">
+            <div class="back-button" onclick="handleBack()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M15 18L9 12L15 6" stroke="#2E2E3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="back-text">返回</span>
+            </div>
+        </div>
+
+        <main class="page-body">
+            <div class="page-layout">
+                <div class="zone-p1">
+                    <section class="result-card">
+                        <div class="result-header">
+                            <h2 class="result-title">完成知识点</h2>
+                            <button class="test-button" onclick="testLevelUp()">升级动画</button>
+                            <div class="result-knowledge">相交线与平行线的引入</div>
+                        </div>
+                        
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                    <circle cx="24" cy="24" r="24" fill="#E6F7FF"/>
+                                    <path d="M24 16C27.3137 16 30 18.6863 30 22C30 25.3137 27.3137 28 24 28C20.6863 28 18 25.3137 18 22C18 18.6863 20.6863 16 24 16Z" stroke="#1890FF" stroke-width="2"/>
+                                    <path d="M14 38C14 34.6863 16.6863 32 20 32H28C31.3137 32 34 34.6863 34 38" stroke="#1890FF" stroke-width="2"/>
+                                </svg>
+                            </div>
+                            <div class="user-stats-wrapper">
+                                <div class="user-stats">
+                                    <div class="user-level">Lv4</div>
+                                    <div class="user-exp">
+                                        <span class="exp-label">经验值:</span>
+                                        <span class="exp-value">5/35</span>
+                                    </div>
+                                </div>
+                                <div class="exp-bar">
+                                    <div class="exp-progress" style="width: 14.29%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 灰色虚线分割线 -->
+                        <div class="divider"></div>
+
+                        <!-- 学习目标达成 -->
+                        <div class="learning-goals-section">
+                            <h3 class="section-subtitle">学习目标达成 2/2</h3>
+                            <ul class="goal-list">
+                                <li class="goal-item">学习数轴的定义，了解数轴三要素</li>
+                                <li class="goal-item">能有数轴表示有理数</li>
+                            </ul>
+                        </div>
+
+                        <!-- 课堂笔记解锁 -->
+                        <div class="notes-section">
+                            <h3 class="section-subtitle">课堂笔记解锁 1/1</h3>
+                            <div class="note-preview">
+                                <div class="note-image">
+                                    <svg width="200" height="120" viewBox="0 0 200 120" fill="none">
+                                        <rect width="200" height="120" fill="#F5F5F5" rx="4"/>
+                                        <text x="10" y="20" font-family="Arial, sans-serif" font-size="12" fill="#333">数轴是什么</text>
+                                        <text x="10" y="40" font-family="Arial, sans-serif" font-size="10" fill="#666">数轴是一条规定了原点、正方向和单位长度的直线</text>
+                                        <text x="10" y="60" font-family="Arial, sans-serif" font-size="12" fill="#333">数轴三要素</text>
+                                        <text x="20" y="80" font-family="Arial, sans-serif" font-size="10" fill="#666">• 原点</text>
+                                        <text x="20" y="95" font-family="Arial, sans-serif" font-size="10" fill="#666">• 正方向</text>
+                                        <text x="20" y="110" font-family="Arial, sans-serif" font-size="10" fill="#666">• 单位长度</text>
+                                    </svg>
+                                </div>
+                                <div class="note-action">
+                                    <span class="view-note" onclick="viewNote()">查看 ></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rewards-section">
+                            <h3 class="section-subtitle">获得奖励</h3>
+                            <div class="reward-item">
+                                <div class="reward-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <circle cx="12" cy="12" r="12" fill="#FFF7E6"/>
+                                        <path d="M12 6V12L16 16" stroke="#FF6B00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="reward-info">
+                                    <span class="reward-name">获得洋葱币 <button class="help-button" onclick="showOnionCoinHelp()"><span class="help-icon">?</span></button></span>
+                                    <span class="reward-value">+100</span>
+                                </div>
+                            </div>
+                            <div class="reward-item">
+                                <div class="reward-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <circle cx="12" cy="12" r="12" fill="#FFF7E6"/>
+                                        <path d="M12 6V12L16 16" stroke="#FF6B00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="reward-info">
+                                    <span class="reward-name">获得葱能 <button class="help-button" onclick="showEnergyHelp()"><span class="help-icon">?</span></button></span>
+                                    <span class="reward-value">+100</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tasks-section">
+                            <h3 class="section-subtitle">完成任务</h3>
+                            <div class="task-item">
+                                <span class="task-text">完成1次教材同步课</span>
+                                <span class="task-status">已完成</span>
+                            </div>
+                        </div>
+
+                        <!-- 获得新成就 -->
+                        <div class="achievements-section">
+                            <h3 class="section-subtitle">获得新成就</h3>
+                            <div class="achievement-item">
+                                <div class="achievement-badge">
+                                    <svg width="120" height="40" viewBox="0 0 120 40" fill="none">
+                                        <rect width="120" height="40" fill="#FFD700" rx="4"/>
+                                        <text x="10" y="28" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">洋葱通行证</text>
+                                        <text x="90" y="28" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#333">LV1</text>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="zone-p0">
+                    <section class="next-section">
+                        <div class="next-card" onclick="handleNextLesson()">
+                            <div class="next-card-header">
+                                <h3 class="next-card-title">下一步学习</h3>
+                                <button class="placeholder-button" onclick="togglePlaceholder()">切换状态</button>
+                            </div>
+                            <div class="next-card-cover" id="videoSection">
+                                <div class="video-preview" onclick="playVideo()">
+                                    <img src="./assets/20260424-171003-a4f17b66-4fd1-44a2-888a-46cd0b71a2c9.png" alt="对顶角小结" class="video-thumbnail">
+                                    <div class="play-button">
+                                        <svg width="50" height="50" viewBox="0 0 50 50" fill="none">
+                                            <circle cx="25" cy="25" r="25" fill="rgba(0, 0, 0, 0.5)"/>
+                                            <path d="M20 15L30 25L20 35V15Z" fill="white"/>
+                                        </svg>
+                                    </div>
+                                    <div class="video-info">
+                                        <span class="video-title">什么是对顶角</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="next-card-footer" id="lessonMetaSection">
+                                <div class="lesson-meta">
+                                    <span class="lesson-type">概念课</span>
+                                    <span class="lesson-difficulty">难度 ★★</span>
+                                    <span class="lesson-tag">课前预习</span>
+                                    <span class="lesson-free">免费</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="zone-p2">
+                    <section class="activity-section">
+                        <div class="activity-list">
+                            <div class="activity-item" onclick="redirectToWechat('学习卡领取')">
+                                <div class="activity-img">
+                                    <img src="./assets/20260424-170456-63322946-ff9a-4ed2-9559-cf286577e7f5.png" alt="免费学习卡" class="activity-image">
+                                </div>
+                            </div>
+                            <div class="activity-item" onclick="redirectToWechat('学习卡领取')">
+                                <div class="activity-img">
+                                    <img src="./assets/aaebc712-df9e-4126-bd70-88ce67234013-902610ea-5d4b-47b3-aac1-23177ac58ad8.png" alt="学习资料" class="activity-image">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- 队列浮层1：学霸之魂浮页（含两页），和其他浮层逻辑完全一致，全屏点击跳转 -->
+    <div class="overlay-wrapper" id="soulOverlay" style="display: none;" onclick="nextOverlay()">
+        <div class="overlay-backdrop"></div>
+        <div class="overlay-content">
+            <div class="overlay-card soul-card">
+                <!-- 第一页：初始页 -->
+                <div class="soul-page" id="soulPage1" onclick="event.stopPropagation(); goToSoulPage2()">
+                    <!-- 头部标题+问号按钮（居中，问号跟在标题后面） -->
+                    <div class="soul-header">
+                        <div class="title-wrapper">
+                            <h3 class="soul-title">学霸之魂唤醒</h3>
+                            <button class="help-btn" onclick="event.stopPropagation(); showSoulHelp()">
+                                <span class="help-icon">?</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 学习小人图片（自带天数特效） -->
+                    <div class="soul-image-wrapper">
+                        <img src="./assets/20260427-151858-f4bc9b73-a5b7-4d48-92eb-722f26860186.png" alt="学霸之魂" class="soul-image">
+                    </div>
+
+                    <!-- 文案提示 -->
+                    <p class="soul-desc">天天学习，唤醒心中的学霸之魂！</p>
+
+                    <!-- 底部操作提示 -->
+                    <div class="footer-tip highlight">点击屏幕任意处继续</div>
+                </div>
+
+                <!-- 第二页：挑战选择页 -->
+                <div class="soul-page" id="soulPage2" style="display: none;">
+                    <!-- 头部标题+问号按钮（和第一页一致） -->
+                    <div class="soul-header">
+                        <div class="title-wrapper">
+                            <h3 class="soul-title">学霸之魂唤醒</h3>
+                            <button class="help-btn" onclick="event.stopPropagation(); showSoulHelp()">
+                                <span class="help-icon">?</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 四个等级图标区域 -->
+                    <div class="level-icons" id="levelIcons">
+                        <div class="level-item active" data-days="3" data-reward="100" onclick="event.stopPropagation(); selectLevel(this)">
+                            <div class="level-icon">
+                                <div class="icon-inner">🔥</div>
+                            </div>
+                            <div class="level-name">初露锋芒</div>
+                        </div>
+                        <span class="arrow">→</span>
+                        <div class="level-item" data-days="7" data-reward="400" onclick="event.stopPropagation(); selectLevel(this)">
+                            <div class="level-icon">
+                                <div class="icon-inner">⚡</div>
+                            </div>
+                            <div class="level-name">渐入佳境</div>
+                        </div>
+                        <span class="arrow">→</span>
+                        <div class="level-item" data-days="14" data-reward="1000" onclick="stopPropagation(event); selectLevel(this)">
+                            <div class="level-icon">
+                                <div class="icon-inner">🏆</div>
+                            </div>
+                            <div class="level-name">大显身手</div>
+                        </div>
+                        <span class="arrow">→</span>
+                        <div class="level-item" data-days="30" data-reward="4000" onclick="event.stopPropagation(); selectLevel(this)">
+                            <div class="level-icon">
+                                <div class="icon-inner">👑</div>
+                            </div>
+                            <div class="level-name">炉火纯青</div>
+                        </div>
+                    </div>
+
+                    <!-- 动态奖励文案 -->
+                    <p class="reward-desc" id="rewardDesc">完成3天学霸之魂连续唤醒挑战，你将获得100洋葱币奖励</p>
+
+                    <!-- 底部操作按钮 -->
+                    <div class="soul-buttons">
+                        <button class="btn btn-gray" onclick="event.stopPropagation(); nextOverlay()">痛心放弃</button>
+                        <button class="btn btn-yellow" onclick="event.stopPropagation(); showJoinChallenge()">参与挑战</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 参与挑战确认弹窗 -->
+    <div class="overlay-wrapper" id="joinChallengeOverlay" style="display: none; z-index: 220;">
+        <div class="overlay-backdrop" onclick="hideJoinChallenge()"></div>
+        <div class="overlay-content">
+            <div class="overlay-card challenge-card">
+                <!-- 头部标题+关闭按钮 -->
+                <div class="challenge-header">
+                    <h3 class="challenge-title">参与挑战</h3>
+                    <button class="close-btn" onclick="event.stopPropagation(); hideJoinChallenge()">×</button>
+                </div>
+
+                <!-- 选中的图标 -->
+                <div class="challenge-icon" id="challengeIcon">
+                    <div class="icon-inner">🔥</div>
+                </div>
+
+                <!-- 确认文案 -->
+                <p class="challenge-desc" id="challengeDesc">是否确认参与3天学霸挑战</p>
+
+                <!-- 底部按钮 -->
+                <div class="challenge-buttons">
+                    <button class="btn btn-white" onclick="stopPropagation(event); hideJoinChallenge()">我再想想</button>
+                        <button class="btn btn-yellow" onclick="event.stopPropagation(); hideJoinChallenge(); nextOverlay();">我要参与</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 学霸之魂说明浮层 -->
+    <div class="overlay-wrapper" id="soulHelpOverlay" style="display: none;">
+        <div class="overlay-backdrop" onclick="hideSoulHelp()"></div>
+        <div class="overlay-content" onclick="hideSoulHelp()">
+            <div class="overlay-card help-card">
+                <div class="help-header">
+                    <h3 class="help-title">什么是学霸之魂？</h3>
+                </div>
+                <div class="help-content">
+                    <p>学霸之魂是你的学习成长记录系统：</p>
+                    <ul>
+                        <li>✅ 连续学习每天自动点亮1点学霸之魂</li>
+                        <li>✅ 累计点亮可兑换专属学习头像框和勋章</li>
+                        <li>✅ 连续学习7天可解锁专属特效</li>
+                    </ul>
+                </div>
+                <div class="footer-tip">点击屏幕任意处关闭</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 队列浮层2：学霸之魂第二页，独立浮层（取消任意处跳转，仅按钮控制） -->
+    <div class="overlay-wrapper" id="soulPage2Overlay" style="display: none;">
+        <div class="overlay-backdrop"></div>
+        <div class="overlay-content">
+            <div class="overlay-card soul-card">
+                <!-- 头部标题+问号按钮 -->
+                <div class="soul-header">
+                    <div class="title-wrapper">
+                        <h3 class="soul-title">学霸之魂唤醒</h3>
+                        <button class="help-btn" onclick="event.stopPropagation(); showSoulHelp()">
+                            <span class="help-icon">?</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 四个等级图标区域 -->
+                <div class="level-icons" id="levelIcons">
+                    <div class="level-item active" data-days="3" data-reward="100" onclick="event.stopPropagation(); selectLevel(this)">
+                        <div class="level-icon">
+                            <div class="icon-inner">🔥</div>
+                        </div>
+                        <div class="level-name">初露锋芒</div>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="level-item" data-days="7" data-reward="400" onclick="event.stopPropagation(); selectLevel(this)">
+                        <div class="level-icon">
+                            <div class="icon-inner">⚡</div>
+                        </div>
+                        <div class="level-name">渐入佳境</div>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="level-item" data-days="14" data-reward="1000" onclick="event.stopPropagation(); selectLevel(this)">
+                        <div class="level-icon">
+                            <div class="icon-inner">🏆</div>
+                        </div>
+                        <div class="level-name">大显身手</div>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="level-item" data-days="30" data-reward="4000" onclick="event.stopPropagation(); selectLevel(this)">
+                        <div class="level-icon">
+                            <div class="icon-inner">👑</div>
+                        </div>
+                        <div class="level-name">炉火纯青</div>
+                    </div>
+                </div>
+
+                <!-- 动态奖励文案 -->
+                <p class="reward-desc" id="rewardDesc2">完成3天学霸之魂连续唤醒挑战，你将获得100洋葱币奖励</p>
+
+                <!-- 底部操作按钮 -->
+                <div class="soul-buttons">
+                    <button class="btn btn-gray" onclick="event.stopPropagation(); nextOverlay()">痛心放弃</button>
+                    <button class="btn btn-yellow" onclick="event.stopPropagation(); showJoinChallenge()">参与挑战</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 队列浮层3：葱能奖励浮页，全屏点击跳转下一页 -->
+    <div class="overlay-wrapper" id="powerOverlay" onclick="nextOverlay()">
+        <div class="overlay-backdrop" onclick="nextOverlay()"></div>
+        <div class="overlay-content" onclick="nextOverlay()">
+            <div class="overlay-card">
+                <div class="overlay-header">
+                    <h3 class="completion-info">完成知识点：相交线与平行线的引入</h3>
+                </div>
+                
+                    <div class="energy-circle">
+                        <div class="energy-ring" id="energyRing">
+                            <div class="ring-progress" id="ringProgress"></div>
+                            <div class="ring-inner">
+                                <div class="energy-value" id="energyValue">100</div>
+                            </div>
+                        </div>
+                        <div class="energy-label">获得葱能</div>
+                    </div>
+                
+                <div class="energy-description">前往「星球」领取葱能奖励吧！</div>
+                
+                <div class="overlay-footer">
+                    <div class="footer-tip">点击屏幕任意处继续</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 队列浮层3：成就解锁浮页，全屏点击跳转下一页 -->
+    <div class="overlay-wrapper" id="achieveOverlay" style="display: none;" onclick="nextOverlay()">
+        <div class="overlay-backdrop" onclick="nextOverlay()"></div>
+        <div class="overlay-content" onclick="nextOverlay()">
+            <div class="overlay-card achieve-card">
+                <div class="overlay-header">
+                    <h3 class="completion-info">🎉 解锁新成就</h3>
+                </div>
+                <div class="achievement-display">
+                    <div class="achievement-card">
+                        <svg width="120" height="120" viewBox="0 0 120 120" fill="none" class="achievement-icon">
+                            <rect width="120" height="120" rx="16" fill="#FFD700"/>
+                            <text x="60" y="70" font-family="Arial" font-size="24" font-weight="bold" fill="#333" text-anchor="middle">新功能</text>
+                        </svg>
+                        <div class="achievement-name">新功能</div>
+                    </div>
+                </div>
+                <div class="footer-tip">点击屏幕任意处继续</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 队列浮层4：星阶升级浮页，全屏点击跳转下一页 -->
+    <div class="overlay-wrapper" id="starOverlay" style="display: none;" onclick="nextOverlay()">
+        <div class="overlay-backdrop" onclick="nextOverlay()"></div>
+        <div class="overlay-content" onclick="nextOverlay()">
+            <div class="overlay-card star-card">
+                <div class="overlay-header">
+                    <h3 class="completion-info" style="background: #ffffff; border: 1px solid #000000; border-radius: 8px; padding: 8px 16px; box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.15);">恭喜升级</h3>
+                </div>
+                <div class="star-level-display">
+                    <div class="level-badge">
+                        <span class="level-text">LV 5</span>
+                    </div>
+                    <div class="level-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 14.29%"></div>
+                        </div>
+                        <div class="progress-text">经验值 5/35</div>
+                    </div>
+                </div>
+                <div class="energy-description">升级奖励：葱能 +20</div>
+                <div class="footer-tip">点击屏幕任意处继续</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 葱能帮助浮层 -->
+    <div class="overlay-wrapper" id="energyHelpOverlay" style="display: none;">
+        <div class="overlay-backdrop" onclick="hideEnergyHelp()"></div>
+        <div class="overlay-content">
+            <div class="overlay-card" onclick="hideEnergyHelp()">
+                <div class="overlay-header">
+                    <h3 class="completion-info">关于葱能</h3>
+                </div>
+                
+                <div class="energy-help-content">
+                    <div class="energy-logo">
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                            <circle cx="32" cy="32" r="32" fill="#FFF7E6"/>
+                            <path d="M32 16V32L40 40" stroke="#FF6B00" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <p>葱能是一种学习积分，通过完成学习任务获得，可以用于兑换学习资源和奖励。</p>
+                </div>
+                
+                <div class="overlay-footer">
+                    <div class="footer-tip">点击屏幕任意处关闭</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 洋葱币帮助浮层 -->
+    <div class="overlay-wrapper" id="onionCoinHelpOverlay" style="display: none;">
+        <div class="overlay-backdrop" onclick="hideOnionCoinHelp()"></div>
+        <div class="overlay-content">
+            <div class="overlay-card" onclick="hideOnionCoinHelp()">
+                <div class="overlay-header">
+                    <h3 class="completion-info">关于洋葱币</h3>
+                </div>
+                
+                <div class="energy-help-content">
+                    <div class="energy-logo">
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                            <circle cx="32" cy="32" r="32" fill="#FFF7E6"/>
+                            <path d="M32 16V32L40 40" stroke="#FF6B00" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <p>洋葱币是一种虚拟货币，通过完成学习任务获得，可以用于购买学习资源和解锁高级功能。</p>
+                </div>
+                
+                <div class="overlay-footer">
+                    <div class="footer-tip">点击屏幕任意处关闭</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时检查是否需要显示弹窗
+        window.onload = function() {
+            const hasOpenedPage = localStorage.getItem('hasOpenedPage');
+            if (!hasOpenedPage) {
+                // 首次打开页面，显示弹窗
+                document.getElementById('completionOverlay').style.display = 'flex';
+            } else {
+                // 非首次打开页面，不显示弹窗
+                document.getElementById('completionOverlay').style.display = 'none';
+            }
+        };
+
+        // 页面交互逻辑
+    function handleBack() {
+        // 点击返回时重置浮层状态，下次进入恢复为首次访问状态
+        localStorage.removeItem('hasOpenedCompletionPage');
+        // 跳转到课程页面
+        window.location.href = 'course-page.html';
+    }
+
+        function handleNextLesson() {
+            console.log('下一步学习');
+            // 这里可以添加下一步学习逻辑
+        }
+
+        function handleActivity(activity) {
+            console.log('点击活动:', activity);
+            // 这里可以添加活动点击逻辑
+        }
+
+    // 浮层队列：学霸第一页 → 学霸第二页 → 葱能 → 成就 → 星阶（id完全对应，没有遗漏）
+    const overlayQueue = ['soulOverlay', 'soulPage2Overlay', 'powerOverlay', 'achieveOverlay', 'starOverlay'];
+    let currentOverlayIndex = 0; // 从学霸第一页开始
+    
+    // 显示当前浮层
+    function showCurrentOverlay() {
+        const globalMask = document.getElementById('globalMask');
+        const completionPage = document.getElementById('completionPage');
+        // 显示全局灰色遮罩
+        globalMask.style.display = 'block';
+        completionPage.style.opacity = '1'; // 去掉原来的半透明，用全局遮罩实现
+        // 禁止操作背景页面，禁止滚动
+        completionPage.classList.add('page-disabled');
+        document.body.style.overflow = 'hidden';
+        document.body.style.touchAction = 'none'; // 移动端禁止滑动
+
+        // 显示当前索引对应的浮层，隐藏其他
+        overlayQueue.forEach((id, index) => {
+            document.getElementById(id).style.display = index === currentOverlayIndex ? 'flex' : 'none';
+        });
+
+        // 进入第二页时，默认选中初露锋芒，更新奖励文案
+        if (currentOverlayIndex === 1) {
+            // 重置选中状态
+            document.querySelectorAll('#soulPage2Overlay .level-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            // 默认选中初露锋芒
+            const defaultLevel = document.querySelector('#soulPage2Overlay .level-item[data-days="3"]');
+            defaultLevel.classList.add('active');
+            currentSelectedLevel = {days: 3, reward: 100, icon: '🔥'};
+            updateRewardDesc();
+        }
+
+        overlayQueue.forEach((id, index) => {
+            document.getElementById(id).style.display = index === currentOverlayIndex ? 'flex' : 'none';
+        });
+
+        // 如果当前是葱能浮页，触发数字增长和进度条动画
+        if (currentOverlayIndex === 2) {
+            const ring = document.getElementById('energyRing');
+            const valueEl = document.getElementById('energyValue');
+            // 重置初始状态
+            ring.classList.remove('animate');
+            valueEl.textContent = '100';
+            
+            // 延迟200ms开始动画
+            setTimeout(() => {
+                // 触发进度条动画
+                ring.classList.add('animate');
+                // 数字从100增长到110
+                let current = 100;
+                const target = 110;
+                const duration = 600; // 速度加快一倍
+                const step = 1;
+                const interval = duration / (target - current);
+                
+                const timer = setInterval(() => {
+                    current += step;
+                    valueEl.textContent = current;
+                    if (current >= target) {
+                        clearInterval(timer);
+                    }
+                }, interval);
+            }, 200);
+        }
+
+        // 如果当前是星阶升级浮页，触发等级和经验值动画
+        if (currentOverlayIndex === 4) {
+            const levelText = document.querySelector('#starOverlay .level-text');
+            const progressText = document.querySelector('#starOverlay .progress-text');
+            const progressFill = document.querySelector('#starOverlay .progress-fill');
+            
+            // 重置初始状态：LV4，经验25/30，进度83.3%
+            levelText.textContent = 'LV 4';
+            progressText.textContent = '经验值 25/30';
+            progressFill.style.transition = 'none';
+            progressFill.style.width = '83.3%';
+            
+            // 延迟200ms开始动画
+            setTimeout(() => {
+                // 第一阶段：进度条从25/30涨到满格30/30
+                progressFill.style.transition = 'width 0.6s ease-out';
+                progressFill.style.width = '100%';
+                // 经验数字从25涨到30
+                let currentExp = 25;
+                const firstTimer = setInterval(() => {
+                    currentExp += 1;
+                    progressText.textContent = `经验值 ${currentExp}/30`;
+                    if (currentExp >= 30) {
+                        clearInterval(firstTimer);
+                        
+                        // 满格后触发等级升级动画
+                        setTimeout(() => {
+                            levelText.textContent = 'LV 5';
+                            levelText.style.transform = 'scale(1.3)';
+                            setTimeout(() => {
+                                levelText.style.transform = 'scale(1)';
+                            }, 200);
+                            
+                            // 第二阶段：清空进度，切换到新等级5/35
+                            setTimeout(() => {
+                                // 瞬间清空进度
+                                progressFill.style.transition = 'none';
+                                progressFill.style.width = '0%';
+                                progressText.textContent = '经验值 0/35';
+                                
+                                // 重排后开始从0涨到5
+                                setTimeout(() => {
+                                    progressFill.style.transition = 'width 0.6s ease-out';
+                                    progressFill.style.width = '14.3%';
+                                    // 数字从0涨到5
+                                    let newExp = 0;
+                                    const secondTimer = setInterval(() => {
+                                        newExp += 1;
+                                        progressText.textContent = `经验值 ${newExp}/35`;
+                                        if (newExp >= 5) {
+                                            clearInterval(secondTimer);
+                                        }
+                                    }, 100);
+                                }, 50);
+                            }, 300);
+                        }, 200);
+                    }
+                }, 50);
+            }, 200);
+        }
+    }
+
+    // 切换到下一个浮层
+    function nextOverlay() {
+        currentOverlayIndex++;
+        if (currentOverlayIndex >= overlayQueue.length) {
+            // 所有浮层播放完成，关闭全局遮罩和所有浮层
+            overlayQueue.forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            document.getElementById('globalMask').style.display = 'none'; // 关闭灰色遮罩
+            const completionPage = document.getElementById('completionPage');
+            completionPage.style.opacity = '1';
+            // 恢复页面可操作，恢复滚动
+            completionPage.classList.remove('page-disabled');
+            document.body.style.overflow = 'auto';
+            document.body.style.touchAction = 'auto';
+            return;
+        }
+        showCurrentOverlay();
+    }
+
+    // 兼容原有的hideOverlay调用
+    function hideOverlay() {
+        nextOverlay();
+    }
+
+    function showOverlay() {
+        showCurrentOverlay();
+    }
+
+    // 学霸之魂帮助浮层操作
+    function showSoulHelp() {
+        document.getElementById('soulHelpOverlay').style.display = 'flex';
+    }
+
+    function hideSoulHelp() {
+        document.getElementById('soulHelpOverlay').style.display = 'none';
+    }
+
+
+    // 当前选中的挑战等级
+    let currentSelectedLevel = {
+        days: 3,
+        reward: 100,
+        icon: '🔥'
+    };
+
+    // 等级选择函数
+    function selectLevel(el) {
+        // 移除所有active状态
+        document.querySelectorAll('.level-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        // 给当前点击的加active
+        el.classList.add('active');
+        // 更新选中的数据
+        currentSelectedLevel = {
+            days: parseInt(el.dataset.days),
+            reward: parseInt(el.dataset.reward),
+            icon: el.querySelector('.icon-inner').textContent
+        };
+        // 更新奖励文案
+        updateRewardDesc();
+    }
+
+    // 更新奖励文案（更新第一页和第二页的文案）
+    function updateRewardDesc() {
+        // 更新第一页文案
+        const descEl1 = document.getElementById('rewardDesc');
+        if (descEl1) {
+            descEl1.textContent = `完成${currentSelectedLevel.days}天学霸之魂连续唤醒挑战，你将获得${currentSelectedLevel.reward}洋葱币奖励`;
+        }
+        // 更新第二页文案
+        const descEl2 = document.getElementById('rewardDesc2');
+        if (descEl2) {
+            descEl2.textContent = `完成${currentSelectedLevel.days}天学霸之魂连续唤醒挑战，你将获得${currentSelectedLevel.reward}洋葱币奖励`;
+        }
+    }
+
+    // 显示参与挑战弹窗
+    function showJoinChallenge() {
+        // 更新弹窗内的图标和文案
+        document.querySelector('#challengeIcon .icon-inner').textContent = currentSelectedLevel.icon;
+        document.getElementById('challengeDesc').textContent = `是否确认参与${currentSelectedLevel.days}天学霸挑战`;
+        // 显示弹窗
+        document.getElementById('joinChallengeOverlay').style.display = 'flex';
+    }
+
+    // 隐藏参与挑战弹窗
+    function hideJoinChallenge() {
+        document.getElementById('joinChallengeOverlay').style.display = 'none';
+    }
+
+    // 学霸之魂浮层全局点击处理，区分两页逻辑
+    function handleSoulOverlayClick(e) {
+        // 点击内部交互元素不触发跳转
+        if (e.target.closest('.help-btn') || e.target.closest('.btn') || e.target.closest('.level-item')) {
+            return;
+        }
+        const page1 = document.getElementById('soulPage1');
+        if (page1.style.display !== 'none') {
+            // 当前是第一页，进入第二页
+            goToSoulPage2();
+        } else {
+            // 当前是第二页，进入下一个浮层
+            nextOverlay();
+        }
+    }
+
+
+        function showEnergyHelp() {
+            document.getElementById('energyHelpOverlay').style.display = 'flex';
+            document.getElementById('completionPage').style.opacity = '0.5';
+        }
+
+        function hideEnergyHelp() {
+            document.getElementById('energyHelpOverlay').style.display = 'none';
+            document.getElementById('completionPage').style.opacity = '1';
+        }
+
+        function showOnionCoinHelp() {
+            document.getElementById('onionCoinHelpOverlay').style.display = 'flex';
+            document.getElementById('completionPage').style.opacity = '0.5';
+        }
+
+        function hideOnionCoinHelp() {
+            document.getElementById('onionCoinHelpOverlay').style.display = 'none';
+            document.getElementById('completionPage').style.opacity = '1';
+        }
+
+        // 等级升级测试函数
+        let isLeveledUp = false;
+        function testLevelUp() {
+            const expValue = document.querySelector('.exp-value');
+            const userLevel = document.querySelector('.user-level');
+            const expProgress = document.querySelector('.exp-progress');
+
+            if (!isLeveledUp) {
+                // 先将进度条从5/35（14.29%）增加到100%
+                expProgress.style.transition = 'width 1s ease-in-out';
+                expProgress.style.width = '100%';
+                
+                // 等待进度条动画完成后，再更新为新等级的初始状态
+                setTimeout(() => {
+                    // 更新经验值和等级
+                    expValue.textContent = '1/40';
+                    userLevel.textContent = '5级';
+                    expProgress.style.width = '2.5%'; // 1/40 = 2.5%
+                    
+                    // 添加动画效果
+                    expValue.style.transform = 'scale(1.5)';
+                    userLevel.style.transform = 'scale(1.5)';
+                    
+                    // 恢复正常大小
+                    setTimeout(() => {
+                        expValue.style.transform = 'scale(1)';
+                        userLevel.style.transform = 'scale(1)';
+                    }, 500);
+                }, 1000);
+                
+                isLeveledUp = true;
+            } else {
+                // 恢复初始状态
+                expValue.textContent = '5/35';
+                userLevel.textContent = '4级';
+                expProgress.style.transition = 'width 1s ease-in-out';
+                expProgress.style.width = '14.29%'; // 5/35 ≈ 14.29%
+                
+                // 添加动画效果
+                expValue.style.transform = 'scale(1.5)';
+                userLevel.style.transform = 'scale(1.5)';
+                
+                // 恢复正常大小
+                setTimeout(() => {
+                    expValue.style.transform = 'scale(1)';
+                    userLevel.style.transform = 'scale(1)';
+                }, 500);
+                
+                isLeveledUp = false;
+            }
+        }
+
+        // 跳转到课程笔记页面
+        function viewNote() {
+            window.location.href = 'note-page.html';
+        }
+
+        // 跳转到独家课程页面
+        function goToExclusiveCourse() {
+            window.location.href = 'exclusive-course.html';
+        }
+
+        // 跳转到更多练习页面
+        function goToMorePractice() {
+            window.location.href = 'more-practice.html';
+        }
+
+        function playVideo() {
+            // 跳转到视频播放页面
+            window.location.href = 'video-player.html';
+        }
+
+        // 占位插图状态变量
+        let isPlaceholderActive = false;
+        let toggleState = 0; // 0: 初始状态, 1: 独家课程, 2: 更多练习, 3: 占位插图
+        let originalVideoContent = '';
+        let originalMetaContent = '';
+
+        function togglePlaceholder() {
+            const videoSection = document.getElementById('videoSection');
+            const lessonMetaSection = document.getElementById('lessonMetaSection');
+            const button = document.querySelector('.placeholder-button');
+            const nextCard = document.querySelector('.next-card');
+            
+            // 检测设备状态
+            const isMobile = window.innerWidth < 640;
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const isMobileLandscape = isMobile && !isPortrait;
+            
+            // 保存原始内容（仅在第一次点击时）
+            if (toggleState === 0) {
+                originalVideoContent = videoSection.innerHTML;
+                originalMetaContent = lessonMetaSection.innerHTML;
+            }
+
+            // 根据当前状态切换
+            toggleState = (toggleState + 1) % 4;
+
+            switch (toggleState) {
+                case 1: // 独家课程
+                case 2: // 更多练习
+                    // 恢复原始内容
+                    videoSection.innerHTML = originalVideoContent;
+                    
+                    // 手机横屏状态下的调整
+                    if (isMobileLandscape) {
+                        console.log('手机横屏状态，应用调整');
+                        
+                        // 直接修改视频预览的HTML，添加缩小样式
+                        const videoPreviewRegex = /(<div class="video-preview" onclick="playVideo()")(>)/;
+                        videoSection.innerHTML = videoSection.innerHTML.replace(videoPreviewRegex, '$1 style="width: 80%; margin: 0 auto 4px; transition: all 0.3s ease;"$2');
+                        
+                        // 缩小播放按钮
+                        const playButtonRegex = /(<div class="play-button")(>)/;
+                        videoSection.innerHTML = videoSection.innerHTML.replace(playButtonRegex, '$1 style="width: 40px; height: 40px; transition: all 0.3s ease;"$2');
+                    }
+                    
+                    // 在标签下方添加对应图片
+                    let imageContent;
+                    if (toggleState === 1) {
+                        imageContent = `
+                            <div class="promo-image-container" style="margin-bottom: 0;">
+                                <svg class="promo-image" onclick="goToExclusiveCourse()" viewBox="0 0 400 60" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="cursor: pointer;">
+                                    <rect width="400" height="60" fill="#4A90D9" rx="8"/>
+                                    <text x="35" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">独家课程</text>
+                                    <text x="175" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">→</text>
+                                </svg>
+                            </div>
+                        `;
+                    } else {
+                        imageContent = `
+                            <div class="promo-image-container" style="margin-bottom: 0;">
+                                <svg class="promo-image" onclick="goToMorePractice()" viewBox="0 0 400 60" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="cursor: pointer;">
+                                    <rect width="400" height="60" fill="#67C23A" rx="8"/>
+                                    <text x="35" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">更多练习</text>
+                                    <text x="185" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">→</text>
+                                </svg>
+                            </div>
+                        `;
+                    }
+                    
+                    lessonMetaSection.innerHTML = originalMetaContent + imageContent;
+                    button.textContent = '切换状态';
+                    
+                    // 确保卡片高度自适应
+                    nextCard.style.overflowY = 'visible';
+                    nextCard.style.maxHeight = 'none';
+                    nextCard.style.height = 'auto';
+                    break;
+                case 3: // 占位插图
+                    // 替换为图片
+                    videoSection.innerHTML = `
+                        <div class="placeholder-image">
+                            <img src="./assets/20260424-173005-fddec5b0-faf4-4b8b-8b15-40330d5ecb3e.png" alt="暂无更多学习计划" class="placeholder-img">
+                        </div>
+                    `;
+                    // 保持lesson-meta部分的高度，添加一个占位元素
+                    lessonMetaSection.innerHTML = `
+                        <div class="lesson-meta-placeholder" style="visibility: hidden;">
+                            <span class="lesson-type"></span>
+                            <span class="lesson-difficulty"></span>
+                            <span class="lesson-tag"></span>
+                            <span class="lesson-free"></span>
+                        </div>
+                    `;
+                    button.textContent = '切换状态';
+                    // 确保卡片高度自适应
+                    nextCard.style.overflowY = 'visible';
+                    nextCard.style.maxHeight = 'none';
+                    nextCard.style.height = 'auto';
+                    break;
+                case 0: // 初始状态
+                    // 恢复原始内容
+                    videoSection.innerHTML = originalVideoContent;
+                    lessonMetaSection.innerHTML = originalMetaContent;
+                    button.textContent = '切换状态';
+                    // 确保卡片高度自适应
+                    nextCard.style.overflowY = 'visible';
+                    nextCard.style.maxHeight = 'none';
+                    nextCard.style.height = 'auto';
+                    break;
+            }
+        }
+
+        function redirectToWechat(activity) {
+            // 跳转到微信小程序
+            window.location.href = 'wechat-redirect.html?activity=' + encodeURIComponent(activity);
+        }
+
+    // 页面加载时自动执行 - 每次刷新都自动弹出浮层
+    window.onload = function() {
+        // 重置所有状态，每次刷新都从第一页开始
+        currentOverlayIndex = 0;
+        // 重置学霸之魂到第一页
+        document.getElementById('soulPage1').style.display = 'block';
+        document.getElementById('soulPage2').style.display = 'none';
+        // 重置默认选中初露锋芒
+        document.querySelectorAll('.level-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector('.level-item[data-days="3"]').classList.add('active');
+        currentSelectedLevel = {days: 3, reward: 100, icon: '🔥'};
+        updateRewardDesc();
+        // 关闭所有弹窗
+        document.getElementById('soulHelpOverlay').style.display = 'none';
+        document.getElementById('joinChallengeOverlay').style.display = 'none';
+        // 显示浮层队列
+        showOverlay();
+    };
+
+    // 提供重置方法，方便你测试：在控制台输入 resetOverlay() 即可恢复首次打开状态
+    window.resetOverlay = function() {
+        localStorage.removeItem('hasOpenedCompletionPage');
+        alert('已重置浮层状态，刷新页面即可重新看到完整队列');
+    };
+
+    // 测试跳转方法：输入 jumpTo(索引) 直接跳转到对应浮页，0=第一页，1=第二页，2=葱能...
+        window.jumpTo = function(index) {
+            currentOverlayIndex = index;
+            showCurrentOverlay();
+            alert(`已跳转到第${index}页：${overlayQueue[index]}`);
+        };
+
+        // 优化横竖屏切换动画：切换时临时禁用所有过渡，避免奇怪的补间效果
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            // 给body添加禁用过渡类
+            document.body.classList.add('disable-transitions');
+            // 清除之前的定时器
+            clearTimeout(resizeTimeout);
+            // 100ms后移除禁用类，恢复正常动画
+            resizeTimeout = setTimeout(() => {
+                document.body.classList.remove('disable-transitions');
+            }, 100);
+        });
+    </script>
+</body>
+</html>
